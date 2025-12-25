@@ -64,13 +64,16 @@
         }
         products.forEach(p => {
             const opt = document.createElement('option');
+            // keep value as internal id (UUID) for API compatibility
             opt.value = p.id || '';
             const title = (p.title || p.name || '').trim();
             const brand = (p.brand || '').trim();
+            // prefer human-friendly code if present, otherwise show the UUID
+            const displayId = p.code || p.id || '';
             if (title) {
-                opt.textContent = brand ? `${title} — ${brand} (${p.id}) — ${p.price ? '£' + p.price : 'Price N/A'}` : `${title} (${p.id}) — ${p.price ? '£' + p.price : 'Price N/A'}`;
+                opt.textContent = brand ? `${title} — ${brand} (${displayId})` : `${title} (${displayId})`;
             } else {
-                opt.textContent = p.id;
+                opt.textContent = displayId || p.id || '';
             }
             sel.appendChild(opt);
         });
@@ -122,7 +125,9 @@
 
         const prod = (data && data.product) ? data.product : null;
         if (prod) {
-            titleEl.textContent = `${prod.title || prod.name || prod.id} — ${prod.brand || ''} (${prod.id || ''})`;
+            // display the human-friendly code where available
+            const displayId = prod.code || prod.id || '';
+            titleEl.textContent = `${prod.title || prod.name || prod.id} — ${prod.brand || ''} (${displayId})`;
             ourPriceEl.textContent = formatMoney(prod.price);
         } else {
             titleEl.textContent = 'Product';
@@ -137,7 +142,8 @@
             brandTd.textContent = c.name || 'Unknown';
 
             const pidTd = document.createElement('td');
-            pidTd.textContent = c.product_id || (prod && prod.id) || '-';
+            // competitor product_id often contains PRD codes — prefer showing it unchanged
+            pidTd.textContent = c.product_id || (prod && (prod.code || prod.id)) || '-';
 
             const ourTd = document.createElement('td');
             const ourVal = (typeof c.our_price === 'number') ? c.our_price : (prod ? prod.price : undefined);

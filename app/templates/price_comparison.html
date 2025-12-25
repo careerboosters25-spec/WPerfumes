@@ -237,6 +237,13 @@
                 resultsBox.setAttribute('aria-hidden', 'true');
             }
 
+            function escapeHtml(str) {
+                if (!str) return '';
+                return String(str).replace(/[&<>"']/g, function (m) {
+                    return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m];
+                });
+            }
+
             function renderResults(list) {
                 resultsBox.innerHTML = '';
                 if (!Array.isArray(list) || list.length === 0) {
@@ -247,10 +254,18 @@
                     const div = document.createElement('div');
                     div.className = 'pc-sr-item';
                     div.setAttribute('role', 'option');
+                    // keep the real select value as the internal id (UUID) so APIs continue to work
                     div.setAttribute('data-id', p.id || '');
                     div.setAttribute('aria-selected', 'false');
-                    div.innerHTML = `<div class="title">${escapeHtml(p.title || p.name || p.id)}</div>
-                                 <div class="meta">${escapeHtml(p.brand || '')} • ${p.price ? '£' + Number(p.price).toFixed(2) : 'Price N/A'}</div>`;
+
+                    const displayName = p.title || p.name || '';
+                    const displayCode = p.code || p.id || '';
+
+                    const titleHtml = `<div class="title">${escapeHtml(displayName)} ${displayCode ? '<span style="font-weight:600;color:#2d8f7c">(' + escapeHtml(displayCode) + ')</span>' : ''}</div>`;
+                    const metaHtml = `<div class="meta">${escapeHtml(p.brand || '')} • ${p.price ? '£' + Number(p.price).toFixed(2) : 'Price N/A'}</div>`;
+
+                    div.innerHTML = titleHtml + metaHtml;
+
                     div.addEventListener('click', () => {
                         chooseResult(idx);
                     });
@@ -260,13 +275,6 @@
                 resultsBox.style.display = '';
                 resultsBox.setAttribute('aria-hidden', 'false');
                 activeIndex = -1;
-            }
-
-            function escapeHtml(str) {
-                if (!str) return '';
-                return String(str).replace(/[&<>"']/g, function (m) {
-                    return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m];
-                });
             }
 
             function highlight(index) {
@@ -282,13 +290,16 @@
                 if (!p) return;
                 try {
                     let optExists = false;
+                    // value remains p.id (internal UUID) so API calls keep working
                     for (const opt of selectEl.options) {
                         if (opt.value === p.id) { opt.selected = true; optExists = true; break; }
                     }
                     if (!optExists) {
                         const opt = document.createElement('option');
-                        opt.value = p.id;
-                        opt.textContent = `${p.title || p.id} — ${p.brand || ''} (${p.id})`;
+                        opt.value = p.id || '';
+                        // Show friendly code when available in the option label
+                        const displayCode = p.code || p.id || '';
+                        opt.textContent = `${p.title || p.id} — ${p.brand || ''} (${displayCode})`;
                         selectEl.appendChild(opt);
                         opt.selected = true;
                     }
