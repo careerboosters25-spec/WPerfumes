@@ -1,0 +1,141 @@
+/* static/css/announcements.css
+   Announcement bar styles (kept separate from page CSS).
+   Mobile-friendly changes: keep the announcement-list positioned absolutely
+   on small screens so the JS transform-based scroller continues to work.
+*/
+
+.announcement-container {
+    width: 100%;
+    padding: 0;
+    margin: 0 auto 8px auto;
+    box-sizing: border-box;
+}
+
+/* the bar itself */
+.announcement-bar {
+    background-color: #222;
+    color: #fff;
+    padding: 6px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* scroll area */
+.announcement-text-container {
+    /* fixed single-line height so transform translateY works predictably */
+    height: 22px;
+    min-height: 22px;
+    flex-grow: 1;
+    overflow: hidden;
+    margin-right: 18px;
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+/* vertical list to be translated */
+.announcement-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    transition: transform 0.45s cubic-bezier(.2, .9, .2, 1);
+    will-change: transform;
+}
+
+/* item styles */
+.announcement-list li {
+    line-height: 22px;
+    text-align: left;
+    padding-right: 6px;
+    font-size: 0.95rem;
+    white-space: nowrap;
+    color: #fff;
+}
+
+/* city selector area on the right (inline) */
+.city-selector {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+/* store locator link */
+.shop-locator {
+    color: #fff;
+    text-decoration: none;
+    font-size: 0.9rem;
+    padding: 6px 8px;
+    border-radius: 6px;
+}
+
+.shop-locator:hover {
+    text-decoration: underline;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+/* Accessibility helper (if used elsewhere) */
+.visually-hidden {
+    position: absolute !important;
+    height: 1px;
+    width: 1px;
+    overflow: hidden;
+    clip: rect(1px, 1px, 1px, 1px);
+    white-space: nowrap;
+}
+
+/* Responsiveness: keep scroller behavior on smaller screens */
+@media (max-width: 768px) {
+    .announcement-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+        padding: 8px;
+    }
+
+    /* Keep the text container a single-line clipped area so the
+       translateY animation still moves items in/out as on desktop. */
+    .announcement-text-container {
+        height: 22px;
+        min-height: 22px;
+        margin-right: 0;
+        overflow: hidden;
+    }
+
+    /* Keep the list absolutely positioned (like desktop) so JS transforms
+       move the list vertically. Do not disable transform here. */
+    .announcement-list {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        /* ensure transition remains available for JS to animate */
+        transition: transform 0.45s cubic-bezier(.2, .9, .2, 1);
+    }
+
+    .city-selector {
+        justify-content: space-between;
+        width: 100%;
+        margin-top: 30px;
+        /* provide breathing room below the scroller */
+    }
+
+    .shop-locator {
+        font-size: 0.85rem;
+        padding: 6px 6px;
+    }
+}
+
+@media (max-width: 420px) {
+    .shop-locator {
+        font-size: 0.82rem;
+    }
+}

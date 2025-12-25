@@ -1,0 +1,12 @@
+HTTP/1.1 200 OK
+Server: Werkzeug/3.1.3 Python/3.13.4
+Date: Sun, 26 Oct 2025 15:40:13 GMT
+Content-Disposition: inline; filename=price_comparison.js
+Content-Type: text/javascript; charset=utf-8
+Content-Length: 7696
+Last-Modified: Sun, 26 Oct 2025 15:09:48 GMT
+Cache-Control: no-cache
+ETag: "1761491388.9642124-7696-1940920911"
+Date: Sun, 26 Oct 2025 15:40:13 GMT
+Connection: close
+

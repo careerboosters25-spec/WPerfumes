@@ -1,0 +1,190 @@
+// static/js/price_comparison.js
+// Frontend for comparison page that expects the server API to return admin-driven
+// comparisons (fields: name, product_id, our_price, competitor_price).
+const API = "/api";
+
+async function fetchProducts() {
+    const sel = document.getElementById('pcProductSelect');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">Loading…</option>';
+    try {
+        // include credentials in case the app sits behind cookie-based auth
+        const res = await fetch(`${API}/products`, { credentials: 'include' });
+        if (!res.ok) {
+            const txt = await res.text().catch(() => res.statusText || 'Error');
+            console.error('/api/products returned non-OK:', res.status, txt);
+            sel.innerHTML = '<option value="">Failed to load products</option>';
+            return;
+        }
+
+        // detect content type and parse JSON defensively
+        const ct = res.headers.get('content-type') || '';
+        let products;
+        if (ct.indexOf('application/json') !== -1) {
+            products = await res.json();
+        } else {
+            // fallback: try to parse JSON from text, otherwise error
+            const text = await res.text();
+            try {
+                products = JSON.parse(text);
+            } catch (e) {
+                console.error('Unexpected content-type from /api/products:', ct, 'body:', text);
+                sel.innerHTML = '<option value="">Failed to load products</option>';
+                return;
+            }
+        }
+
+        sel.innerHTML = '<option value="">-- Select product --</option>';
+        if (!Array.isArray(products) || products.length === 0) {
+            // keep the placeholder but be explicit if empty
+            sel.innerHTML = '<option value="">No products available</option>';
+            return;
+        }
+
+        products.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            // be defensive in display of price/brand/title
+            const title = p.title || 'Untitled';
+            const brand = p.brand || '';
+            const id = p.id || '';
+            const priceText = (p.price !== undefined && p.price !== null && !isNaN(p.price)) ? ('£' + Number(p.price).toFixed(2)) : 'Price N/A';
+            opt.textContent = `${title} — ${brand} (${id}) — ${priceText}`;
+            sel.appendChild(opt);
+        });
+    } catch (e) {
+        console.error('fetchProducts error', e);
+        const sel2 = document.getElementById('pcProductSelect');
+        if (sel2) sel2.innerHTML = '<option value="">Failed to load products</option>';
+    }
+}
+
+function setStatus(msg, isError = false) {
+    const st = document.getElementById('pcStatus');
+    if (!st) return;
+    st.textContent = msg || '';
+    st.style.color = isError ? '#c00' : '';
+}
+
+function formatMoney(n) {
+    if (n === null || typeof n === 'undefined' || isNaN(n)) return '—';
+    try {
+        return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 2 }).format(Number(n));
+    } catch (e) {
+        return '£' + Number(n).toFixed(2);
+    }
+}
+
+async function runCompare(productId) {
+    setStatus('Running comparison — using admin values where present...');
+    const resultDiv = document.getElementById('pcResult');
+    if (resultDiv) resultDiv.style.display = 'none';
+    try {
+        // include credentials here as well for parity
+        const res = await fetch(`${API}/price-compare?product_id=${encodeURIComponent(productId)}`, { credentials: 'include' });
+        if (!res.ok) {
+            const txt = await res.text().catch(() => res.statusText);
+            setStatus('Comparison failed: ' + txt, true);
+            console.error('/api/price-compare returned non-OK:', res.status, txt);
+            return;
+        }
+        const js = await res.json();
+        renderComparison(js);
+    } catch (e) {
+        console.error(e);
+        setStatus('Network error while comparing prices', true);
+    }
+}
+
+function renderComparison(data) {
+    setStatus('');
+    const tbody = document.querySelector('#pcTable tbody');
+    if (tbody) tbody.innerHTML = '';
+    const titleEl = document.getElementById('pcProductTitle');
+    const ourPriceEl = document.getElementById('pcOurPrice');
+    const badge = document.getElementById('pcBadge');
+
+    if (data && data.product) {
+        titleEl.textContent = `${data.product.title} — ${data.product.brand} (${data.product.id})`;
+        ourPriceEl.textContent = formatMoney(data.product.price);
+    } else {
+        titleEl.textContent = '—';
+        ourPriceEl.textContent = '—';
+    }
+
+    const comps = Array.isArray(data.comparisons) ? data.comparisons : [];
+    comps.forEach(c => {
+        const tr = document.createElement('tr');
+
+        const brandTd = document.createElement('td');
+        brandTd.textContent = c.name || 'Unknown';
+
+        const pidTd = document.createElement('td');
+        pidTd.textContent = c.product_id || (data.product && data.product.id) || '-';
+
+        const ourTd = document.createElement('td');
+        const ourVal = (typeof c.our_price === 'number') ? c.our_price : (data.product ? data.product.price : null);
+        ourTd.textContent = formatMoney(ourVal);
+
+        const compTd = document.createElement('td');
+        const compVal = (typeof c.competitor_price === 'number') ? c.competitor_price : (typeof c.manual_price === 'number' ? c.manual_price : c.found_price);
+        if (compVal === null || compVal === undefined || isNaN(compVal)) {
+            compTd.textContent = c.error ? `Error` : 'N/A';
+        } else {
+            compTd.textContent = formatMoney(compVal);
+        }
+
+        tr.appendChild(brandTd);
+        tr.appendChild(pidTd);
+        tr.appendChild(ourTd);
+        tr.appendChild(compTd);
+        if (tbody) tbody.appendChild(tr);
+    });
+
+    if (data.ours_is_cheapest) {
+        if (badge) {
+            badge.style.display = 'inline-block';
+            badge.textContent = 'Cheapest (Great value!)';
+        }
+    } else {
+        if (badge) badge.style.display = 'none';
+    }
+
+    const resultDiv2 = document.getElementById('pcResult');
+    if (resultDiv2) resultDiv2.style.display = '';
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    fetchProducts();
+    const pcCompareBtn = document.getElementById('pcCompareBtn');
+    if (pcCompareBtn) {
+        pcCompareBtn.addEventListener('click', function () {
+            const sel = document.getElementById('pcProductSelect');
+            const pid = sel ? sel.value : null;
+            if (!pid) {
+                setStatus('Please select a product to compare', true);
+                return;
+            }
+            runCompare(pid);
+        });
+    }
+
+    const preset = window.PC_PRESET_PRODUCT_ID && window.PC_PRESET_PRODUCT_ID.length ? window.PC_PRESET_PRODUCT_ID : null;
+    if (preset) {
+        const trySelect = setInterval(() => {
+            const sel = document.getElementById('pcProductSelect');
+            if (sel && sel.options.length > 1) {
+                for (const opt of sel.options) {
+                    if (opt.value === preset) {
+                        opt.selected = true;
+                        clearInterval(trySelect);
+                        runCompare(preset);
+                        return;
+                    }
+                }
+                clearInterval(trySelect);
+            }
+        }, 200);
+        setTimeout(() => clearInterval(trySelect), 8000);
+    }
+});

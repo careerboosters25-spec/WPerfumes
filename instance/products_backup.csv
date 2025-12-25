@@ -1,0 +1,4 @@
+id,brand,title,price,quantity,image_url,thumbnails
+PRD001,Creed,Aventus,350.0,10,images/creed/aventus.jpg,"images/creed/aventus.jpg,images/creed/aventus_side.jpg,images/creed/aventus_box.jpg"
+PRD002,Creed,Himalaya,280.0,10,images/creed/himalaya.jpg,"images/creed/himalaya.jpg,images/creed/himalaya_side.jpg,images/creed/himalaya_box.jpg"
+PRD003,Creed,Aventus for Her,330.0,10,images/creed/aventus_for_her.jpg,"images/creed/aventus_for_her.jpg,images/creed/aventus_for_her_side.jpg,images/creed/aventus_for_her_box.jpg"

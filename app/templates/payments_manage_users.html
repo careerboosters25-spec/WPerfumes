@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Manage Payments Admin Users</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+    <style>
+        .manage-container {
+            max-width: 900px;
+            margin: 18px auto;
+            padding: 12px;
+        }
+
+        .small-muted {
+            color: #666;
+            font-size: 0.95em;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse
+        }
+
+        th,
+        td {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            text-align: left
+        }
+
+        .btn {
+            background: #2d8f7c;
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer
+        }
+
+        .danger {
+            background: #e74c3c
+        }
+    </style>
+</head>
+
+<body>
+    <div class="manage-container">
+        <h2>Payments Admin Users — Management</h2>
+        <div class="small-muted">Only the site admin (main admin panel) can access this page to create/update
+            top-management accounts.</div>
+
+        <h3 style="margin-top:14px;">Create top-management user</h3>
+        <form id="createUserForm" style="display:flex;gap:8px;align-items:center;">
+            <input id="username" placeholder="username" required style="padding:8px">
+            <input id="password" type="password" placeholder="password" required style="padding:8px">
+            <select id="role">
+                <option value="CEO">CEO</option>
+                <option value="Chairman">Chairman</option>
+                <option value="CFO">CFO</option>
+            </select>
+            <button class="btn" type="submit">Create</button>
+        </form>
+        <div id="createMsg" style="margin-top:8px;"></div>
+
+        <h3 style="margin-top:18px;">Existing payments-admin users</h3>
+        <div style="overflow:auto">
+            <table id="usersTable">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Role</th>
+                        <th>Created</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        async function apiFetch(url, opts = {}) {
+            opts.credentials = 'include';
+            opts.headers = opts.headers || {};
+            return fetch(url, opts);
+        }
+
+        async function loadUsers() {
+            const t = document.querySelector('#usersTable tbody');
+            t.innerHTML = '<tr><td colspan="3" style="color:#666;padding:10px">Loading…</td></tr>';
+            try {
+                const res = await apiFetch('/payments-admin/api/manage-users');
+                if (!res.ok) {
+                    t.innerHTML = '<tr><td colspan="3" style="color:#c00;padding:10px">Failed to load</td></tr>';
+                    return;
+                }
+                const js = await res.json();
+                if (!js.length) {
+                    t.innerHTML = '<tr><td colspan="3" style="color:#666;padding:10px">No users</td></tr>';
+                    return;
+                }
+                t.innerHTML = '';
+                js.forEach(u => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `<td>${u.username}</td><td>${u.role}</td><td>${u.created_at}</td>`;
+                    t.appendChild(tr);
+                });
+            } catch (err) {
+                t.innerHTML = '<tr><td colspan="3" style="color:#c00;padding:10px">Error</td></tr>';
+            }
+        }
+
+        document.getElementById('createUserForm').onsubmit = async function (e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const role = document.getElementById('role').value;
+            const msg = document.getElementById('createMsg');
+            msg.textContent = 'Creating...';
+            try {
+                const res = await apiFetch('/payments-admin/api/manage-users', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password, role })
+                });
+                const text = await res.text().catch(() => null);
+                if (!res.ok) {
+                    msg.style.color = '#c00';
+                    msg.textContent = 'Failed: ' + (text || res.statusText);
+                    return;
+                }
+                msg.style.color = '#118d58';
+                msg.textContent = 'User created';
+                document.getElementById('username').value = '';
+                document.getElementById('password').value = '';
+                loadUsers();
+            } catch (err) {
+                msg.style.color = '#c00';
+                msg.textContent = 'Network error';
+            } finally {
+                setTimeout(() => msg.textContent = '', 3000);
+            }
+        };
+
+        loadUsers();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>About Us — WPerfumes</title>
+
+    <!-- Use the same stylesheets as index.html -->
+    <link rel="stylesheet" href="/static/css/main.css">
+    <link rel="stylesheet" href="/static/css/announcements.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-o9N1j8bM0g6IVT+gq4kZpM3b6rY2v6b7qf+3yg7P6u0=" crossorigin="" />
+    <link rel="stylesheet" href="/static/css/hero-audio.css">
+    <link rel="stylesheet" href="/static/css/footer.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <!-- Page-specific styles for improved UX/UI -->
+    <style>
+        /* Hero */
+        .about-hero {
+            background: linear-gradient(180deg, #fffefe 0%, #f4fbfb 60%);
+            padding: 44px 22px;
+            border-radius: 12px;
+            margin: 18px 0;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 8px 28px rgba(11, 83, 81, 0.06);
+            flex-wrap: wrap;
+        }
+
+        .about-hero h1 {
+            margin: 0 0 8px 0;
+            color: #054c4b;
+            font-size: 2rem;
+        }
+
+        .about-hero p {
+            margin: 0;
+            color: #3f5b5a;
+            max-width: 760px;
+        }
+
+        .hero-ctas {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .cta {
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+        }
+
+        .cta-primary {
+            background: linear-gradient(90deg, #0b9a97, #0b6e6b);
+            color: #fff;
+            box-shadow: 0 8px 20px rgba(11, 150, 151, 0.12);
+        }
+
+        .cta-ghost {
+            background: transparent;
+            border: 1px solid rgba(11, 83, 81, 0.08);
+            color: #0b5351;
+        }
+
+        /* Layout */
+        .about-grid {
+            display: grid;
+            grid-template-columns: 1fr 360px;
+            gap: 18px;
+            margin-top: 20px;
+        }
+
+        @media (max-width:980px) {
+            .about-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Left column: content */
+        .panel {
+            background: #fff;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 8px 22px rgba(30, 40, 60, 0.04);
+            border: 1px solid #eef7f7;
+        }
+
+        .panel h2 {
+            margin: 0 0 8px 0;
+            color: #0b5351;
+        }
+
+        .muted {
+            color: #6d8b8b;
+        }
+
+        /* FAQ accordion */
+        .faq-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .faq-search {
+            flex: 1;
+            min-width: 200px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .faq-search input {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid #e4f0ef;
+        }
+
+        .faq-accordion {
+            display: grid;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .faq-item {
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid #eef6f6;
+            background: linear-gradient(180deg, #fff, #fbffff);
+        }
+
+        .faq-summary {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 14px;
+            cursor: pointer;
+            gap: 12px;
+        }
+
+        .faq-summary h3 {
+            margin: 0;
+            font-size: 1rem;
+            color: #053d3b;
+        }
+
+        .faq-body {
+            padding: 12px 14px;
+            border-top: 1px solid #eef6f6;
+            display: none;
+            color: #3f5b5a;
+        }
+
+        .faq-item.open .faq-body {
+            display: block;
+            animation: fadeIn .16s ease;
+        }
+
+        .faq-item.open .faq-summary {
+            background: #f1fbfb;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-6px);
+            }
+
+            to {
+                opacity: 1;
+                transform: none;
+            }
+        }
+
+        /* Right column: quick links and micro-stories */
+        .sidebar-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .card {
+            padding: 12px;
+            border-radius: 10px;
+            background: linear-gradient(180deg, #fff, #fbffff);
+            border: 1px solid #eef8f8;
+        }
+
+        .card h4 {
+            margin: 0 0 6px 0;
+            color: #053d3b;
+        }
+
+        .quick-links {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .quick-link {
+            padding: 8px;
+            border-radius: 8px;
+            background: #fff;
+            border: 1px dashed rgba(11, 83, 81, 0.04);
+            text-align: center;
+            cursor: pointer;
+        }
+
+        .quick-link a {
+            color: #0b5351;
+            text-decoration: none;
+            font-weight: 700;
+            display: block;
+        }
+
+        /* Shipping & Returns timeline */
+        .timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .timeline-step {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .timeline-step .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: linear-gradient(90deg, #0b9a97, #0b6e6b);
+            margin-top: 6px;
+            flex: 0 0 12px;
+        }
+
+        .timeline-step p {
+            margin: 0;
+            color: #3f5b5a;
+        }
+
+        /* Privacy policy brief */
+        .privacy-list {
+            display: grid;
+            gap: 8px;
+        }
+
+        .privacy-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            border-radius: 8px;
+            background: #fff;
+            border: 1px solid #eef6f6;
+        }
+
+        /* Explore grid */
+        .explore-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .explore-card {
+            padding: 12px;
+            border-radius: 10px;
+            background: linear-gradient(180deg, #fff, #fbffff);
+            border: 1px solid #eef8f8;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .explore-card p {
+            margin: 0;
+            color: #3f5b5a;
+        }
+
+        .explore-cta {
+            margin-top: auto;
+        }
+
+        /* Footer note */
+        .small {
+            font-size: 0.92rem;
+            color: #6d8b8b;
+        }
+
+        /* Responsive tweaks */
+        @media (max-width:640px) {
+            .explore-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .quick-links {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Announcement (same as site) -->
+    <div class="announcement-container container" aria-live="polite">
+        <header class="announcement-bar" role="region" aria-label="Site announcements">
+            <div class="announcement-text-container" aria-hidden="false">
+                <ul class="announcement-list" aria-live="off" aria-hidden="false">
+                    <li>Shop Now Pay Later</li>
+                    <li>Free Delivery Above $50</li>
+                    <li>10% Discount if Cash on Delivery</li>
+                    <li>Trusted Products</li>
+                    <li>Shop With Us Now</li>
+                </ul>
+            </div>
+            <div class="city-selector" aria-hidden="false">
+                <a class="shop-locator" href="/">Store Locator</a>
+            </div>
+        </header>
+    </div>
+
+    <div id="blinking-offer" class="blinking-offer" style="display:none;"></div>
+
+    <!-- Navigation -->
+    <nav class="navbar" role="navigation" aria-label="Main navigation">
+        <div style="display:flex;align-items:center;gap:12px;">
+            <a class="brand-logo" href="/">WPerfumes</a>
+            <ul class="nav-tabs" role="menubar" aria-label="Site Menu">
+                <li><a href="/">Home</a></li>
+                <li><a href="/brands">Fragrances</a></li>
+                <li><a href="/price-comparison">Compare Prices</a></li>
+                <li><a href="/static/pages/history.html">History</a></li>
+                <li><a href="/static/pages/about.html">About Us</a></li>
+            </ul>
+        </div>
+
+        <div class="navbar-center">
+            <div class="search-container">
+                <input id="siteSearchInput" type="text" placeholder="Search for scents, notes, or brands..."
+                    aria-label="Search">
+            </div>
+        </div>
+
+        <div class="navbar-right">
+            <a id="cartBtn" class="cart-btn" href="/cart" aria-label="Open cart">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3e2723" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="9" cy="21" r="1"></circle>
+                    <circle cx="20" cy="21" r="1"></circle>
+                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61l1.38-8.19H6"></path>
+                </svg>
+                <span>Cart</span>
+                <span id="cartCountBadge" class="cart-count-badge" style="display:none;">0</span>
+            </a>
+
+            <div class="login-menu-container">
+                <a href="/login" class="login-btn">Login</a>
+                <div class="login-submenu">
+                    <a href="/signup" class="signup-btn">Sign Up</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main content -->
+    <main id="page-content" class="container" role="main" aria-live="polite" style="padding:24px;">
+        <section class="about-hero">
+            <div>
+                <h1>About WPerfumes</h1>
+                <p>At WPerfumes we curate and celebrate fragrance: the creators, the materials, and the memories they
+                    unlock. We bring carefully selected perfumes from independent noses and classic houses to your
+                    doorstep with transparency, sustainable practice and personal service.</p>
+                <div class="hero-ctas">
+                    <button class="cta cta-primary" id="ctaExplore">Explore Our Collections</button>
+                    <a class="cta cta-ghost" href="/static/pages/history.html">Read Perfumers' Stories</a>
+                </div>
+            </div>
+
+            <div class="muted center">
+                <div><strong>Customer Support</strong></div>
+                <div class="small">Email: support@wperfumes.com • Phone: +1 (555) 123-4567</div>
+            </div>
+        </section>
+
+        <div class="about-grid">
+            <!-- Left: Main panels -->
+            <div>
+                <!-- Who we are -->
+                <section class="panel" aria-labelledby="whoHeading">
+                    <h2 id="whoHeading">Who we are</h2>
+                    <p class="muted">WPerfumes is a boutique retail and editorial platform dedicated to scent discovery.
+                        We partner with perfumers, small houses and established brands to feature meaningful fragrances,
+                        informative storytelling and a customer-first shopping experience.</p>
+
+                    <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
+                        <div class="card" style="flex:1; min-width:160px;">
+                            <h4>Mission</h4>
+                            <p class="small">Curate authentic fragrances and elevate the stories of the noses behind
+                                them.</p>
+                        </div>
+                        <div class="card" style="flex:1; min-width:160px;">
+                            <h4>Values</h4>
+                            <p class="small">Transparency, quality, sustainability and celebration of creativity.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- FAQ -->
+                <section class="panel" aria-labelledby="faqHeading" style="margin-top:14px;">
+                    <h2 id="faqHeading">Frequently Asked Questions</h2>
+
+                    <div class="faq-controls">
+                        <div class="faq-search" role="search" aria-label="Search FAQ">
+                            <input id="faqInput" placeholder="Search FAQs (shipping, returns, samples, scents)..."
+                                aria-label="Search FAQs">
+                            <button id="faqClear" class="cta cta-ghost" title="Clear">Clear</button>
+                        </div>
+                        <div style="display:flex;gap:8px;">
+                            <button id="expandAll" class="cta cta-ghost">Expand All</button>
+                            <button id="collapseAll" class="cta cta-ghost">Collapse All</button>
+                        </div>
+                    </div>
+
+                    <div id="faqAccordion" class="faq-accordion" role="list">
+                        <!-- FAQ items injected by JS -->
+                    </div>
+                </section>
+
+                <!-- Shipping & Returns -->
+                <section class="panel" style="margin-top:14px;" aria-labelledby="shipHeading">
+                    <h2 id="shipHeading">Shipping & Returns</h2>
+                    <p class="muted">We aim to make delivery and returns simple and fair. Quick bullets first, then
+                        details
+                        so customers can scan quickly.</p>
+
+                    <div class="timeline" aria-hidden="false">
+                        <div class="timeline-step">
+                            <div class="dot" aria-hidden="true"></div>
+                            <div>
+                                <strong>Free shipping</strong>
+                                <p class="muted">Free delivery on orders over $50 (standard domestic shipping).</p>
+                            </div>
+                        </div>
+
+                        <div class="timeline-step">
+                            <div class="dot" aria-hidden="true"></div>
+                            <div>
+                                <strong>Fast dispatch</strong>
+                                <p class="muted">Orders typically dispatch within 1–2 business days.</p>
+                            </div>
+                        </div>
+
+                        <div class="timeline-step">
+                            <div class="dot" aria-hidden="true"></div>
+                            <div>
+                                <strong>30-day returns</strong>
+                                <p class="muted">If you're not satisfied, return unopened items within 30 days for a
+                                    refund.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <details
+                        style="margin-top:12px; padding:12px; border-radius:8px; background:#fff; border:1px solid #eef6f6;">
+                        <summary style="cursor:pointer; font-weight:700; color:#053d3b;">Full Shipping & Returns Policy
+                        </summary>
+                        <div style="margin-top:8px; color:#3f5b5a;">
+                            <p><strong>International shipping:</strong> Rates and delivery times vary by destination.
+                                Duties and
+                                taxes may apply; customers are responsible for import fees in their country.</p>
+                            <p><strong>Return steps:</strong> Contact support@wperfumes.com to request a return
+                                authorization,
+                                package items securely and ship within 30 days. Returned items must be unused and in
+                                original
+                                condition for full refund.</p>
+                            <p class="small muted">Note: Sample vials and decants are final sale.</p>
+                        </div>
+                    </details>
+                </section>
+
+                <!-- Privacy Policy -->
+                <section class="panel" style="margin-top:14px;" aria-labelledby="privacyHeading">
+                    <h2 id="privacyHeading">Privacy & Data</h2>
+                    <p class="muted">We care about how your data is used. Below are quick highlights; the full policy is
+                        accessible
+                        via the link.</p>
+
+                    <div class="privacy-list">
+                        <div class="privacy-row">
+                            <div>
+                                <strong>Data we collect</strong>
+                                <div class="small muted">Order information, address, email for communication.</div>
+                            </div>
+                            <a href="/privacy" class="small">Read more</a>
+                        </div>
+
+                        <div class="privacy-row">
+                            <div>
+                                <strong>How we use it</strong>
+                                <div class="small muted">To process orders, personalize product recommendations, and
+                                    send
+                                    service updates.</div>
+                            </div>
+                            <a href="/privacy" class="small">Details</a>
+                        </div>
+
+                        <div class="privacy-row">
+                            <div>
+                                <strong>Your rights</strong>
+                                <div class="small muted">Access, correct or request deletion by emailing
+                                    support@wperfumes.com.</div>
+                            </div>
+                            <a href="/privacy" class="small">Manage</a>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:10px;" class="small muted">We never sell your personal information and we
+                        follow
+                        industry-standard safeguards.</div>
+                </section>
+
+                <!-- Explore & Editorial -->
+                <section class="panel" style="margin-top:14px;" aria-labelledby="exploreHeading">
+                    <h2 id="exploreHeading">Explore</h2>
+                    <p class="muted">Quick paths to the site's most useful tools and editorial resources.</p>
+
+                    <div class="explore-grid">
+                        <div class="explore-card">
+                            <h4>Best Sellers</h4>
+                            <p>Discover fragrances our customers revisit again and again — current favorites and
+                                classics.</p>
+                            <div class="explore-cta"><a class="cta cta-primary" href="/best-sellers">Shop Best
+                                    Sellers</a></div>
+                        </div>
+
+                        <div class="explore-card">
+                            <h4>Gift Sets</h4>
+                            <p>Curated gift sets for celebrations — ready to send and beautifully packaged.</p>
+                            <div class="explore-cta"><a class="cta cta-primary" href="/gift-sets">View Gift Sets</a>
+                            </div>
+                        </div>
+
+                        <div class="explore-card">
+                            <h4>Scent Finder Quiz</h4>
+                            <p>Not sure where to start? Try our short quiz and get personalized fragrance
+                                recommendations.</p>
+                            <div class="explore-cta"><a class="cta cta-primary" href="/scent-finder">Find Your Scent</a>
+                            </div>
+                        </div>
+
+                        <div class="explore-card">
+                            <h4>Blog & News</h4>
+                            <p>Read interviews with perfumers, material deep dives and seasonal guides from our
+                                editorial team.</p>
+                            <div class="explore-cta"><a class="cta cta-primary" href="/blog">Visit Blog</a></div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Right: Sidebar -->
+            <aside class="sidebar-stack" aria-label="Quick links and stories">
+                <div class="card">
+                    <h4>Need help?</h4>
+                    <div class="small muted">Email support@wperfumes.com or use live chat (available Mon–Fri).</div>
+                    <div style="margin-top:10px; display:flex; gap:8px;">
+                        <a class="cta cta-primary" href="/contact">Contact Us</a>
+                        <a class="cta cta-ghost" href="/static/pages/about.html#faqHeading">Full FAQ</a>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h4>Top categories</h4>
+                    <div class="quick-links" role="navigation" aria-label="Top categories">
+                        <div class="quick-link"><a href="/men">Men</a></div>
+                        <div class="quick-link"><a href="/women">Women</a></div>
+                        <div class="quick-link"><a href="/new-arrivals">New Arrivals</a></div>
+                        <div class="quick-link"><a href="/sale">Sale</a></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h4>From the editors</h4>
+                    <div style="display:flex;flex-direction:column;gap:8px;">
+                        <div>
+                            <strong>Becoming a Nose — Mini Guide</strong>
+                            <div class="small muted">A short primer on perfumer careers and training.</div>
+                        </div>
+                        <div>
+                            <strong>Sustainability in Sourcing</strong>
+                            <div class="small muted">How WPerfumes chooses responsibly sourced materials.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h4>Quick policy links</h4>
+                    <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px;">
+                        <a href="/static/pages/about.html#privacyHeading" class="small">Privacy Policy</a>
+                        <a href="/static/pages/about.html#shipHeading" class="small">Shipping & Returns</a>
+                        <a href="/terms" class="small">Terms & Conditions</a>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="main-footer">
+        <div class="footer-card footer-card-1">
+            <div>
+                <h3>Connect with Us</h3>
+                <div class="social-icons-row">
+                    <a href="https://www.facebook.com/wperfumes" class="social-icon"
+                        aria-label="Follow us on Facebook"><i class="fab fa-facebook-f"></i></a>
+                    <a href="https://www.instagram.com/wperfumes" class="social-icon"
+                        aria-label="Follow us on Instagram"><i class="fab fa-instagram"></i></a>
+                    <a href="https://www.tiktok.com/@wperfumes" class="social-icon" aria-label="Follow us on TikTok"><i
+                            class="fab fa-tiktok"></i></a>
+                    <a href="https://www.twitter.com/wperfumes" class="social-icon" aria-label="Follow us on Twitter"><i
+                            class="fab fa-x-twitter"></i></a>
+                </div>
+                <h3>Secure Payments</h3>
+                <div class="payment-icons-row">
+                    <span class="payment-icon" aria-label="Visa Payment"><i class="fab fa-cc-visa"></i></span>
+                    <span class="payment-icon" aria-label="PayPal Payment"><i class="fab fa-cc-paypal"></i></span>
+                    <span class="payment-icon" aria-label="Apple Pay"><i class="fab fa-cc-apple-pay"></i></span>
+                    <span class="payment-icon" aria-label="MasterCard Payment"><i
+                            class="fab fa-cc-mastercard"></i></span>
+                </div>
+            </div>
+            <p class="registration-number" id="copyright">&copy; WPerfumes, Inc. All Rights Reserved.<br>Company Reg.
+                No: 12345678A</p>
+        </div>
+
+        <div class="footer-card footer-card-2">
+            <h2 class="footer-logo">WPerfumes</h2>
+            <div class="footer-link-column" id="footer-column-1">
+                <h4>Company</h4>
+                <a href="/static/pages/about.html" class="footer-link">About Us</a>
+                <a href="/vision" class="footer-link">Our Vision</a>
+                <a href="/sustainability" class="footer-link">Sustainability</a>
+                <a href="/careers" class="footer-link">Careers</a>
+            </div>
+            <div class="footer-link-column" id="footer-column-2">
+                <h4>Support</h4>
+                <a href="/contact" class="footer-link">Contact Us</a>
+                <a href="/static/pages/about.html#faqHeading" class="footer-link">FAQ</a>
+                <a href="/static/pages/about.html#shipHeading" class="footer-link">Shipping & Returns</a>
+                <a href="/static/pages/about.html#privacyHeading" class="footer-link">Privacy Policy</a>
+            </div>
+            <div class="footer-link-column" id="footer-column-3">
+                <h4>Explore</h4>
+                <a href="/best-sellers" class="footer-link">Best Sellers</a>
+                <a href="/gift-sets" class="footer-link">Gift Sets</a>
+                <a href="/scent-finder" class="footer-link">Scent Finder Quiz</a>
+                <a href="/blog" class="footer-link">Blog & News</a>
+            </div>
+            <div class="footer-link-column" id="footer-column-4">
+                <h4>Contact Info</h4>
+                <a href="mailto:support@wperfumes.com" class="footer-link">Email: support@wperfumes.com</a>
+                <a href="tel:+15551234567" class="footer-link">Phone: +1 (555) 123-4567</a>
+                <a href="/contact#address" class="footer-link">Address: 100 Scent Lane, Perfume City</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Shared placeholders -->
+    <script>
+        window.PLACEHOLDER_IMG = "/static/images/placeholder.jpg";
+        window.DEFAULT_PRODUCT_IMG = "/static/images/default.jpg";
+    </script>
+
+    <!-- Shared site scripts -->
+    <script src="/static/js/main.js"></script>
+    <script src="/static/js/announcements.js"></script>
+    <script src="/static/js/footer.js"></script>
+    <script src="/static/js/hero-audio.js"></script>
+    <script src="/static/js/hero-enhance.js"></script>
+
+    <!-- Page-specific JS: FAQ, search, accordion behaviour -->
+    <script>
+        (function () {
+            const faqData = [
+                { q: "How do I choose the right perfume?", a: "Start with family and notes you enjoy (e.g., floral, woody, oriental). Use our Scent Finder Quiz for personalized recommendations and request samples when available to try at home." },
+                { q: "Do you offer samples or decants?", a: "We offer samples for many perfumes; availability varies by brand. Sample options are shown on product pages when offered." },
+                { q: "What is your returns policy?", a: "Unopened bottles may be returned within 30 days for a full refund. Contact support@wperfumes.com for return authorization. Samples and opened vials are final sale unless defective." },
+                { q: "How long does shipping take?", a: "Domestic shipping usually arrives within 3–7 business days for standard delivery. Expedited options are available at checkout." },
+                { q: "Are your fragrances authentic?", a: "Yes — we source directly from perfumers and authorized distributors. If you suspect an authenticity issue, contact support immediately." },
+                { q: "How do I care for perfumes?", a: "Store in a cool, dark place away from direct sunlight and temperature swings. Keep caps tightly closed to preserve freshness." },
+                { q: "Can I get custom or bespoke fragrances?", a: "Some partner perfumers offer bespoke services. Contact us or check a perfumer's profile for bespoke availability." },
+                { q: "Do you ship internationally?", a: "Yes; international shipping is available but times and duties vary. Customers are responsible for local import taxes and customs fees." }
+            ];
+
+            const faqAccordion = document.getElementById("faqAccordion");
+            const faqInput = document.getElementById("faqInput");
+            const faqClear = document.getElementById("faqClear");
+            const expandAll = document.getElementById("expandAll");
+            const collapseAll = document.getElementById("collapseAll");
+            const ctaExplore = document.getElementById("ctaExplore");
+
+            // Render FAQ items
+            function renderFaq(filter = "") {
+                faqAccordion.innerHTML = "";
+                const normalized = filter.trim().toLowerCase();
+                const filtered = faqData.filter(item => {
+                    if (!normalized) return true;
+                    return item.q.toLowerCase().includes(normalized) || item.a.toLowerCase().includes(normalized);
+                });
+
+                if (filtered.length === 0) {
+                    const empty = document.createElement("div");
+                    empty.className = "muted";
+                    empty.textContent = "No matching FAQs. Try different keywords like 'shipping' or 'samples'.";
+                    faqAccordion.appendChild(empty);
+                    return;
+                }
+
+                filtered.forEach((item, idx) => {
+                    const node = document.createElement("div");
+                    node.className = "faq-item";
+                    node.setAttribute("role", "listitem");
+                    node.innerHTML = `
+                        <div class="faq-summary" data-index="${idx}" aria-expanded="false">
+                            <h3>${escapeHtml(item.q)}</h3>
+                            <div class="muted"><i class="fa-solid fa-chevron-down"></i></div>
+                        </div>
+                        <div class="faq-body">${escapeHtml(item.a)}</div>
+                    `;
+                    // toggle
+                    const summary = node.querySelector(".faq-summary");
+                    summary.addEventListener("click", () => {
+                        const isOpen = node.classList.toggle("open");
+                        summary.setAttribute("aria-expanded", isOpen ? "true" : "false");
+                        // collapse others for focused reading
+                        document.querySelectorAll(".faq-item.open").forEach(other => {
+                            if (other !== node) {
+                                other.classList.remove("open");
+                                other.querySelector(".faq-summary").setAttribute("aria-expanded", "false");
+                            }
+                        });
+                    });
+
+                    faqAccordion.appendChild(node);
+                });
+            }
+
+            faqInput.addEventListener("input", debounce(() => renderFaq(faqInput.value), 160));
+            faqClear.addEventListener("click", () => { faqInput.value = ""; renderFaq(); });
+
+            expandAll.addEventListener("click", () => {
+                document.querySelectorAll(".faq-item").forEach(it => {
+                    it.classList.add("open");
+                    it.querySelector(".faq-summary").setAttribute("aria-expanded", "true");
+                });
+            });
+            collapseAll.addEventListener("click", () => {
+                document.querySelectorAll(".faq-item").forEach(it => {
+                    it.classList.remove("open");
+                    it.querySelector(".faq-summary").setAttribute("aria-expanded", "false");
+                });
+            });
+
+            // CTA scroll to explore
+            ctaExplore.addEventListener("click", () => {
+                const target = document.getElementById("exploreHeading");
+                if (target) target.scrollIntoView({ behavior: "smooth", block: "center" });
+                console.log("CTA Explore clicked");
+            });
+
+            // Utilities
+            function debounce(fn, wait) {
+                let timer;
+                return function (...args) {
+                    clearTimeout(timer);
+                    timer = setTimeout(() => fn.apply(this, args), wait);
+                };
+            }
+            function escapeHtml(str) {
+                if (!str) return "";
+                return String(str)
+                    .replaceAll("&", "&amp;")
+                    .replaceAll("<", "&lt;")
+                    .replaceAll(">", "&gt;")
+                    .replaceAll('"', "&quot;")
+                    .replaceAll("'", "&#039;");
+            }
+
+            // initial render
+            renderFaq();
+
+            // Accessibility: keyboard interactions for accordion (Enter/Space)
+            document.addEventListener("keydown", (ev) => {
+                if ((ev.key === "Enter" || ev.key === " ") && document.activeElement && document.activeElement.classList.contains("faq-summary")) {
+                    ev.preventDefault();
+                    document.activeElement.click();
+                }
+            });
+
+            // Expose small public hooks for analytics or server wiring
+            window.WPerfumesAbout = {
+                faq: {
+                    search: (q) => { faqInput.value = q; renderFaq(q); }
+                }
+            };
+        })();
+    </script>
+</body>
+
+</html>

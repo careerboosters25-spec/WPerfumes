@@ -1,0 +1,8 @@
+homepage_id,section,product_id,sort_order,visible
+1,signature,PRD001,1,1
+2,men,PRD002,2,1
+3,women,PRD003,3,1
+4,offers,PRD003,0,1
+5,men,PRD002,0,1
+6,signature,PRD003,0,1
+7,signature,PRD159062,0,1

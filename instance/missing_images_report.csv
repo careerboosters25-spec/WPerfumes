@@ -1,0 +1,66 @@
+type,id_or_name,brand,title,image_path_in_db,expected_full_path,exists
+product,PRD001,Creed,Aventus,images/creed/aventus.jpg,D:\WPerfumes\app\static\images\creed\aventus.jpg,True
+product,PRD002,Creed,Himalaya,images/creed/himalaya.jpg,D:\WPerfumes\app\static\images\creed\himalaya.jpg,True
+product,PRD003,Creed,Aventus for Her,images/creed/aventus_for_her.jpg,D:\WPerfumes\app\static\images\creed\aventus_for_her.jpg,False
+product,AMOUAGE_AMOUAGE,Amouage,Amouage,images/amouage/amouage.jpg,D:\WPerfumes\app\static\images\amouage\amouage.jpg,True
+product,AMOUAGE_DECISION,Amouage,Decision,images/amouage/decision.jpg,D:\WPerfumes\app\static\images\amouage\decision.jpg,True
+product,AMOUAGE_ENCLAVE,Amouage,Enclave,images/amouage/enclave.jpg,D:\WPerfumes\app\static\images\amouage\enclave.jpg,True
+product,AMOUAGE_EPIER,Amouage,Epier,images/amouage/epier.jpg,D:\WPerfumes\app\static\images\amouage\epier.jpg,True
+product,AMOUAGE_GOLD,Amouage,Gold,images/amouage/gold.jpg,D:\WPerfumes\app\static\images\amouage\gold.jpg,True
+product,AMOUAGE_GUIDANCE46,Amouage,Guidance46,images/amouage/guidance46.jpg,D:\WPerfumes\app\static\images\amouage\guidance46.jpg,True
+product,AMOUAGE_HONOR,Amouage,Honor,images/amouage/honor.jpg,D:\WPerfumes\app\static\images\amouage\honor.jpg,True
+product,AMOUAGE_INTERLUDE,Amouage,Interlude,images/amouage/interlude.jpg,D:\WPerfumes\app\static\images\amouage\interlude.jpg,True
+product,AMOUAGE_INTERLUDE53,Amouage,Interlude53,images/amouage/interlude53.jpg,D:\WPerfumes\app\static\images\amouage\interlude53.jpg,True
+product,AMOUAGE_JUBILATION40,Amouage,Jubilation40,images/amouage/jubilation40.jpg,D:\WPerfumes\app\static\images\amouage\jubilation40.jpg,True
+product,AMOUAGE_JUBILATIONXXV,Amouage,Jubilationxxv,images/amouage/jubilationxxv.jpg,D:\WPerfumes\app\static\images\amouage\jubilationxxv.jpg,True
+product,AMOUAGE_OUTLAND,Amouage,Outland,images/amouage/outland.jpg,D:\WPerfumes\app\static\images\amouage\outland.jpg,True
+product,AMOUAGE_ROSEINCENSO,Amouage,Roseincenso,images/amouage/roseincenso.jpg,D:\WPerfumes\app\static\images\amouage\roseincenso.jpg,True
+product,AMOUAGE_SILVEROUD,Amouage,Silveroud,images/amouage/silveroud.jpg,D:\WPerfumes\app\static\images\amouage\silveroud.jpg,True
+product,BRANDS_AMOUAGE_LOGO,Brands,Amouage Logo,images/brands/amouage_logo.jpg,D:\WPerfumes\app\static\images\brands\amouage_logo.jpg,True
+product,BRANDS_CREED_LOGO,Brands,Creed Logo,images/brands/creed_logo.jpg,D:\WPerfumes\app\static\images\brands\creed_logo.jpg,True
+product,BRANDS_EMPORIO_ARMANI_LOGO,Brands,Emporio Armani Logo,images/brands/emporio_armani_logo.jpg,D:\WPerfumes\app\static\images\brands\emporio_armani_logo.jpg,True
+product,BRANDS_PARFUMS_DE_MARLY_LOGO,Brands,Parfums De Marly Logo,images/brands/parfums_de_marly_logo.jpg,D:\WPerfumes\app\static\images\brands\parfums_de_marly_logo.jpg,True
+product,BRANDS_PENHALIGONS_LOGO,Brands,Penhaligons Logo,images/brands/penhaligons_logo.jpg,D:\WPerfumes\app\static\images\brands\penhaligons_logo.jpg,True
+product,BRANDS_TOM_FORD_LOGO,Brands,Tom Ford Logo,images/brands/tom_ford_logo.jpg,D:\WPerfumes\app\static\images\brands\tom_ford_logo.jpg,True
+product,BRANDS_XERJOFF_LOGO,Brands,Xerjoff Logo,images/brands/xerjoff_logo.jpg,D:\WPerfumes\app\static\images\brands\xerjoff_logo.jpg,True
+product,CLIVE_CHRISTIAN_CLIVE0,Clive Christian,Clive0,images/clive_christian/clive0.jpg,D:\WPerfumes\app\static\images\clive_christian\clive0.jpg,True
+product,CLIVE_CHRISTIAN_CLIVE_CHRISTIAN,Clive Christian,Clive Christian,images/clive_christian/clive_christian.jpg,D:\WPerfumes\app\static\images\clive_christian\clive_christian.jpg,True
+product,CREED_ABSOLUAVENTUS,Creed,Absoluaventus,images/creed/absoluaventus.jpg,D:\WPerfumes\app\static\images\creed\absoluaventus.jpg,True
+product,CREED_AVENTUSCOLOGNE,Creed,Aventuscologne,images/creed/aventuscologne.jpg,D:\WPerfumes\app\static\images\creed\aventuscologne.jpg,True
+product,CREED_AVENTUSFORHER,Creed,Aventusforher,images/creed/aventusforher.jpg,D:\WPerfumes\app\static\images\creed\aventusforher.jpg,True
+product,CREED_CREED,Creed,Creed,images/creed/creed.jpg,D:\WPerfumes\app\static\images\creed\creed.jpg,True
+product,CREED_CREED_AVENTUS0,Creed,Creed Aventus0,images/creed/creed_aventus0.jpg,D:\WPerfumes\app\static\images\creed\creed_aventus0.jpg,True
+product,CREED_CREED_AVENTUS1,Creed,Creed Aventus1,images/creed/creed_aventus1.jpg,D:\WPerfumes\app\static\images\creed\creed_aventus1.jpg,True
+product,CREED_CREED_AVENTUS2,Creed,Creed Aventus2,images/creed/creed_aventus2.jpg,D:\WPerfumes\app\static\images\creed\creed_aventus2.jpg,True
+product,CREED_FLEURSDEBULGARIE,Creed,Fleursdebulgarie,images/creed/fleursdebulgarie.jpg,D:\WPerfumes\app\static\images\creed\fleursdebulgarie.jpg,True
+product,CREED_FRAGARIA,Creed,Fragaria,images/creed/fragaria.jpg,D:\WPerfumes\app\static\images\creed\fragaria.jpg,True
+product,CREED_GREENIRISHTWEED,Creed,Greenirishtweed,images/creed/greenirishtweed.jpg,D:\WPerfumes\app\static\images\creed\greenirishtweed.jpg,True
+product,CREED_MILLESIME1849,Creed,Millesime1849,images/creed/millesime1849.jpg,D:\WPerfumes\app\static\images\creed\millesime1849.jpg,True
+product,CREED_MILLESIME18490,Creed,Millesime18490,images/creed/millesime18490.jpg,D:\WPerfumes\app\static\images\creed\millesime18490.jpg,True
+product,CREED_MILLESIME18491,Creed,Millesime18491,images/creed/millesime18491.jpg,D:\WPerfumes\app\static\images\creed\millesime18491.jpg,True
+product,CREED_MILLESIMEIMPERIAL,Creed,Millesimeimperial,images/creed/millesimeimperial.jpg,D:\WPerfumes\app\static\images\creed\millesimeimperial.jpg,True
+product,CREED_ORIGINALSANTAL,Creed,Originalsantal,images/creed/originalsantal.jpg,D:\WPerfumes\app\static\images\creed\originalsantal.jpg,True
+product,CREED_ROYALMAYFAIR,Creed,Royalmayfair,images/creed/royalmayfair.jpg,D:\WPerfumes\app\static\images\creed\royalmayfair.jpg,True
+product,CREED_SILVERMOUNTAINWATER,Creed,Silvermountainwater,images/creed/silvermountainwater.jpg,D:\WPerfumes\app\static\images\creed\silvermountainwater.jpg,True
+product,CREED_SPRINGFLOWER,Creed,Springflower,images/creed/springflower.jpg,D:\WPerfumes\app\static\images\creed\springflower.jpg,True
+product,CREED_VIKING,Creed,Viking,images/creed/viking.jpg,D:\WPerfumes\app\static\images\creed\viking.jpg,True
+product,CREED_VIRGINISLANDWATER,Creed,Virginislandwater,images/creed/virginislandwater.jpg,D:\WPerfumes\app\static\images\creed\virginislandwater.jpg,True
+product,EMPORIO_ARMANI_ACQUA_DI_GIO,Emporio Armani,Acqua Di Gio,images/emporio_armani/acqua_di_gio.jpg,D:\WPerfumes\app\static\images\emporio_armani\acqua_di_gio.jpg,True
+product,EMPORIO_ARMANI_ACQUA_DI_GIO_PROFONDO,Emporio Armani,Acqua Di Gio Profondo,images/emporio_armani/acqua_di_gio_profondo.jpg,D:\WPerfumes\app\static\images\emporio_armani\acqua_di_gio_profondo.jpg,True
+product,EMPORIO_ARMANI_ACQUA_DI_GIOIA,Emporio Armani,Acqua Di Gioia,images/emporio_armani/acqua_di_gioia.jpg,D:\WPerfumes\app\static\images\emporio_armani\acqua_di_gioia.jpg,True
+product,EMPORIO_ARMANI_ARMANI_CODE,Emporio Armani,Armani Code,images/emporio_armani/armani_code.jpg,D:\WPerfumes\app\static\images\emporio_armani\armani_code.jpg,True
+product,EMPORIO_ARMANI_ARMANI_CODE_PARFUM,Emporio Armani,Armani Code Parfum,images/emporio_armani/armani_code_parfum.jpg,D:\WPerfumes\app\static\images\emporio_armani\armani_code_parfum.jpg,True
+product,EMPORIO_ARMANI_EMPORIO_ARMANI,Emporio Armani,Emporio Armani,images/emporio_armani/emporio_armani.jpg,D:\WPerfumes\app\static\images\emporio_armani\emporio_armani.jpg,True
+product,EMPORIO_ARMANI_EMPORIO_ARMANI_DIAMONDS,Emporio Armani,Emporio Armani Diamonds,images/emporio_armani/emporio_armani_diamonds.jpg,D:\WPerfumes\app\static\images\emporio_armani\emporio_armani_diamonds.jpg,True
+product,EMPORIO_ARMANI_MY_WAY_EAU_DE_PARFUM,Emporio Armani,My Way Eau De Parfum,images/emporio_armani/my_way_eau_de_parfum.jpg,D:\WPerfumes\app\static\images\emporio_armani\my_way_eau_de_parfum.jpg,True
+product,EMPORIO_ARMANI_SI_EAU_DE_PARFUM,Emporio Armani,Si Eau De Parfum,images/emporio_armani/si_eau_de_Parfum.jpg,D:\WPerfumes\app\static\images\emporio_armani\si_eau_de_Parfum.jpg,True
+product,EMPORIO_ARMANI_SI_PASSIONE,Emporio Armani,Si Passione,images/emporio_armani/si_passione.jpg,D:\WPerfumes\app\static\images\emporio_armani\si_passione.jpg,True
+product,EMPORIO_ARMANI_STRONGER_WITH_YOU,Emporio Armani,Stronger With You,images/emporio_armani/stronger_with_you.jpg,D:\WPerfumes\app\static\images\emporio_armani\stronger_with_you.jpg,True
+product,GIORGIO_ARMANI_ACQUADIGIO,Giorgio Armani,Acquadigio,images/giorgio_armani/acquadigio.jpg,D:\WPerfumes\app\static\images\giorgio_armani\acquadigio.jpg,True
+product,GIORGIO_ARMANI_GIORGIO_ARMANI,Giorgio Armani,Giorgio Armani,images/giorgio_armani/giorgio_armani.jpg,D:\WPerfumes\app\static\images\giorgio_armani\giorgio_armani.jpg,True
+product,PARFUMS_DE_MARLY_PARFUMS_DE_MARLY,Parfums De Marly,Parfums De Marly,images/parfums_de_marly/parfums_de_marly.jpg,D:\WPerfumes\app\static\images\parfums_de_marly\parfums_de_marly.jpg,True
+product,PARFUMS_DE_MARLY_TOM_FORD_BLACK_ORCHID,Parfums De Marly,Tom Ford Black Orchid,images/parfums_de_marly/tom_ford_black_orchid.jpg,D:\WPerfumes\app\static\images\parfums_de_marly\tom_ford_black_orchid.jpg,True
+product,PARFUMS_DE_MARLY_TOM_FORD_OUD_WOOD,Parfums De Marly,Tom Ford Oud Wood,images/parfums_de_marly/tom_ford_oud_wood.jpg,D:\WPerfumes\app\static\images\parfums_de_marly\tom_ford_oud_wood.jpg,True
+product,PENHALIGONS_PENHALIGONS,Penhaligon's,Penhaligons,images/penhaligons/penhaligons.jpg,D:\WPerfumes\app\static\images\penhaligons\penhaligons.jpg,True
+product,TOM_FORD_TOM_FORD,Tom Ford,Tom Ford,images/tom_ford/tom_ford.jpg,D:\WPerfumes\app\static\images\tom_ford\tom_ford.jpg,True
+product,XERJOFF_XERJOFF,Xerjoff,Xerjoff,images/xerjoff/xerjoff.jpg,D:\WPerfumes\app\static\images\xerjoff\xerjoff.jpg,True

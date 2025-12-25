@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Sign Up - WPerfumes</title>
+
+    <!-- Main stylesheet (use Flask url_for to resolve correctly in templates) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+
+    <style>
+        /* Page-specific styles */
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(180deg, #fff 0%, #f2ebe6 100%);
+            color: #222;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+            padding: 28px;
+            width: 100%;
+            max-width: 520px;
+        }
+
+        h1 {
+            margin: 0 0 8px 0;
+            font-size: 24px;
+        }
+
+        p.lead {
+            margin: 0 0 16px 0;
+            color: #555;
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="password"] {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid #e6e6e6;
+            box-sizing: border-box;
+            font-size: 15px;
+        }
+
+        .actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: none;
+            background: #2d8f7c;
+            color: #fff;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .btn.secondary {
+            background: #f0f0f0;
+            color: #222;
+            border: 1px solid #dedede;
+            font-weight: 600;
+        }
+
+        .links {
+            margin-top: 12px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.95rem;
+        }
+
+        .msg {
+            margin-top: 12px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .msg.success {
+            background: #e6f9ef;
+            color: #1b7a50;
+            border: 1px solid #c6efd9;
+        }
+
+        .msg.error {
+            background: #fff1f1;
+            color: #b02a2a;
+            border: 1px solid #f2c6c6;
+        }
+
+        .password-hint {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 6px;
+        }
+
+        @media (max-width:560px) {
+            .card {
+                padding: 18px;
+                margin: 8px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main class="card" role="main" aria-labelledby="signup-heading">
+        <h1 id="signup-heading">Create an account</h1>
+        <p class="lead">Join WPerfumes to save favorites, checkout faster and track orders.</p>
+
+        <!-- Keep action as a server fallback; JS will intercept and POST JSON to the API for better UX -->
+        <form id="signupForm" action="/api/auth/signup" method="POST" novalidate>
+            <div class="form-group">
+                <label for="fullName">Full name</label>
+                <input id="fullName" name="name" type="text" autocomplete="name" required placeholder="Jane Doe">
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email address</label>
+                <input id="email" name="email" type="email" inputmode="email" required autocomplete="email"
+                    placeholder="name@example.com">
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input id="password" name="password" type="password" required autocomplete="new-password"
+                    placeholder="Create a password">
+                <div class="password-hint">Use at least 8 characters. Include letters and numbers for a stronger
+                    password.</div>
+            </div>
+
+            <div class="form-group">
+                <label for="passwordConfirm">Confirm password</label>
+                <input id="passwordConfirm" name="passwordConfirm" type="password" required autocomplete="new-password"
+                    placeholder="Re-enter your password">
+            </div>
+
+            <div class="actions">
+                <button id="submitBtn" type="submit" class="btn">Create account</button>
+                <a href="{{ url_for('main.index') }}" class="btn secondary"
+                    style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;">Back
+                    Home</a>
+            </div>
+
+            <div id="msg" class="msg" role="status" aria-live="polite"></div>
+
+            <div class="links">
+                <span>Already have an account? <a href="{{ url_for('main.login_page') }}">Sign in</a></span>
+                <a href="{{ url_for('main.forgot_password') }}">Forgot password?</a>
+            </div>
+        </form>
+    </main>
+
+    <script>
+        (function () {
+            // Relative API base so page works in dev and in production (Render, etc.)
+            const API = "/api";
+
+            const form = document.getElementById('signupForm');
+            const nameEl = document.getElementById('fullName');
+            const emailEl = document.getElementById('email');
+            const passwordEl = document.getElementById('password');
+            const confirmEl = document.getElementById('passwordConfirm');
+            const submitBtn = document.getElementById('submitBtn');
+            const msgEl = document.getElementById('msg');
+
+            function showMessage(text, kind = 'error') {
+                msgEl.className = 'msg ' + (kind === 'success' ? 'success' : 'error');
+                msgEl.textContent = text;
+                msgEl.style.display = 'block';
+            }
+            function hideMessage() {
+                msgEl.style.display = 'none';
+                msgEl.textContent = '';
+            }
+
+            function validateForm() {
+                const name = (nameEl.value || '').trim();
+                const email = (emailEl.value || '').trim();
+                const password = passwordEl.value || '';
+                const confirm = confirmEl.value || '';
+
+                if (!name) { showMessage('Please enter your name.', 'error'); nameEl.focus(); return false; }
+                if (!email) { showMessage('Please enter your email.', 'error'); emailEl.focus(); return false; }
+                if (!password || password.length < 8) { showMessage('Password must be at least 8 characters.', 'error'); passwordEl.focus(); return false; }
+                if (password !== confirm) { showMessage('Passwords do not match.', 'error'); confirmEl.focus(); return false; }
+                return true;
+            }
+
+            form.addEventListener('submit', async function (e) {
+                // Intercept and submit via fetch to avoid full page navigation and to show inline messages
+                e.preventDefault();
+                hideMessage();
+
+                if (!validateForm()) return;
+
+                const payload = {
+                    name: (nameEl.value || '').trim(),
+                    email: (emailEl.value || '').trim(),
+                    password: passwordEl.value
+                };
+
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Creating...';
+
+                try {
+                    const res = await fetch(`${API}/auth/signup`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'same-origin',
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (res.ok) {
+                        // Account created
+                        let data = null;
+                        try { data = await res.json(); } catch (err) { data = null; }
+                        const message = (data && (data.message || data.msg)) ? (data.message || data.msg) : 'Account created successfully.';
+                        showMessage(message + ' Redirecting to sign in...', 'success');
+                        setTimeout(() => { window.location.href = "{{ url_for('main.login_page') }}"; }, 900);
+                        return;
+                    }
+
+                    // Handle server errors / validation
+                    let errText = 'Failed to create account. Please try again.';
+                    try {
+                        const errData = await res.json();
+                        if (errData && (errData.error || errData.message)) errText = errData.error || errData.message;
+                    } catch (parseErr) {
+                        if (res.status === 409) errText = 'An account with that email already exists.';
+                        else if (res.status === 400) errText = 'Invalid input.';
+                    }
+                    showMessage(errText, 'error');
+                } catch (networkErr) {
+                    console.warn('Signup network error', networkErr);
+                    showMessage('Network error — please check your connection and try again.', 'error');
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Create account';
+                }
+            });
+
+            // Hide message on input
+            [nameEl, emailEl, passwordEl, confirmEl].forEach(el => el.addEventListener('input', () => {
+                if (msgEl.style.display === 'block') hideMessage();
+            }));
+
+            // Accessibility: focus first field on load
+            window.addEventListener('load', () => nameEl.focus());
+        })();
+    </script>
+
+    <!-- Optional shared main.js -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+
+</html>

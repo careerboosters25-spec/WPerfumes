@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>WPerfumes — Announcements</title>
+
+    <!-- Announcement styles (single source) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/announcements.css') }}">
+</head>
+
+<body>
+    <div class="announcement-container container" aria-live="polite">
+        <header class="announcement-bar" role="region" aria-label="Site announcements">
+            <div class="announcement-text-container" aria-hidden="false">
+                <ul class="announcement-list" aria-live="off" aria-hidden="false">
+                    <li>Shop Now Pay Later</li>
+                    <li>Free Delivery Above $50</li>
+                    <li>10% Discount if Cash on Delivery</li>
+                    <li>Trusted Products</li>
+                    <li>Shop With Us Now</li>
+                </ul>
+            </div>
+
+            <div class="city-selector" aria-hidden="false">
+                <!-- Store Locator remains as the placeholder link -->
+                <a class="shop-locator" href="{{ url_for('main.brand') }}">Store Locator</a>
+            </div>
+        </header>
+    </div>
+
+    <!-- scroller behavior (single source) -->
+    <script src="{{ url_for('static', filename='js/announcements.js') }}"></script>
+</body>
+
+</html>

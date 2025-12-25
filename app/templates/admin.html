@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WPerfumes Admin Dashboard</title>
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+    <link rel="stylesheet" href="/static/css/admin.css" />
+</head>
+
+<body>
+    <div id="loginBg" class="modal-bg" style="display:flex;">
+        <div class="modal">
+            <h3>Admin Login</h3>
+            <form id="loginForm">
+                <label for="username">Username</label>
+                <input id="username" required />
+                <label for="password">Password</label>
+                <input id="password" type="password" required />
+                <div class="modal-actions">
+                    <button type="submit" class="btn">Login</button>
+                </div>
+                <div style="margin-top:8px; font-size:0.93em; color:#aaa">
+                    Default: <b>admin / password123</b>
+                </div>
+                <div id="loginError" style="margin-top:8px;color:#e74c3c;display:none;"></div>
+            </form>
+        </div>
+    </div>
+
+    <aside class="sidebar">
+        <h1>WPerfumes Admin</h1>
+        <nav>
+
+            <a href="javascript:void(0)" id="tabBrands" class="active"><span class="material-icons">store</span>
+                Brands</a>
+            <a href="javascript:void(0)" id="tabProducts"><span class="material-icons">inventory</span> Products</a>
+            <a href="javascript:void(0)" id="tabHomepage"><span class="material-icons">star</span> Homepage Products</a>
+            <a href="javascript:void(0)" id="tabTopPicks"><span class="material-icons">emoji_events</span> Top Picks</a>
+            <a href="javascript:void(0)" id="tabCoupons"><span class="material-icons">local_offer</span> Promotions</a>
+            <a href="javascript:void(0)" id="tabOrders"><span class="material-icons">receipt_long</span> Customer
+                Orders</a>
+            <a href="javascript:void(0)" id="tabPriceComparison"><span class="material-icons">compare_arrows</span>
+                Price Comparison</a>
+        </nav>
+        <button class="logout" id="logoutBtn"><span class="material-icons">logout</span> Logout</button>
+    </aside>
+
+    <main class="main">
+        <!-- SITE SETTINGS -->
+        <section class="card" id="siteSettingsCard" style="margin-bottom:32px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div style="font-size:1.13em;font-weight:500;">Site Settings</div>
+            </div>
+
+            <form id="discountSettingForm"
+                style="margin-top:12px;display:grid;grid-template-columns:1fr;gap:12px;align-items:start;">
+                <div>
+                    <label for="checkout_discount_percent" style="font-weight:500;">Checkout Discount (%)</label>
+                    <input type="number" min="0" max="100" step="0.1" id="checkout_discount_percent"
+                        style="width:120px;">
+                </div>
+
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <button type="submit" class="btn accent">Save Settings</button>
+                    <span id="discountSaveMsg" style="margin-left:12px; color:#218c6e; font-size:0.98em;"></span>
+                </div>
+            </form>
+
+            <div style="margin-top:18px;border-top:1px solid #f0f0f0;padding-top:14px;">
+                <h4 style="margin:0 0 8px 0;font-weight:600;">Other Site Settings</h4>
+            </div>
+        </section>
+
+        <!-- BRANDS CARD -->
+        <section class="card" id="brandsCard">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div style="font-size:1.13em;font-weight:500;">Brands</div>
+                <button class="btn accent" id="addBrandBtn"><span class="material-icons">add</span> Add Brand</button>
+            </div>
+            <div class="order-table-scroll">
+                <table id="brandsTable">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Logo</th>
+                            <th>Description</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- PRODUCTS CARD -->
+        <section class="card" id="productsCard" style="display:none;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div style="font-size:1.13em;font-weight:500;">Products</div>
+                <button class="btn accent" id="addProductBtn"><span class="material-icons">add</span> Add
+                    Product</button>
+            </div>
+            <div class="order-table-scroll">
+                <table id="productsTable">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Brand</th>
+                            <th>Price</th>
+                            <th>Status</th>
+                            <th>Inventory</th>
+                            <th>Tags</th>
+                            <th>Main Image</th>
+                            <th>Thumbnails</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- HOMEPAGE CARD -->
+        <section class="card" id="homepageCard" style="display:none;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div style="font-size:1.13em;font-weight:500;">Homepage Products</div>
+                <button class="btn accent" id="addHomepageBtn"><span class="material-icons">add</span> Add Homepage
+                    Product</button>
+            </div>
+            <div class="order-table-scroll">
+                <table id="homepageTable">
+                    <thead>
+                        <tr>
+                            <th>Section</th>
+                            <th>Title</th>
+                            <th>Brand</th>
+                            <th>Price</th>
+                            <th>Sort</th>
+                            <th>Visible</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- TOP PICKS CARD -->
+        <section class="card" id="topPicksCard" style="display:none;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div style="font-size:1.13em;font-weight:500;">Top Picks</div>
+                <button class="btn accent" id="addTopPickBtn"><span class="material-icons">add</span> Add Top
+                    Pick</button>
+            </div>
+            <div class="order-table-scroll">
+                <table id="topPicksTable">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Brand</th>
+                            <th>Rank</th>
+                            <th>Tags</th>
+                            <th>Sales</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- COUPONS CARD -->
+        <section class="card" id="couponsCard" style="display:none;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div style="font-size:1.13em;font-weight:500;">Promotions</div>
+                <button class="btn accent" id="addCouponBtn"><span class="material-icons">add</span> Add
+                    Promotion</button>
+            </div>
+            <div class="order-table-scroll">
+                <table id="couponsTable">
+                    <thead>
+                        <tr>
+                            <th>Code</th>
+                            <th>Description</th>
+                            <th>Type</th>
+                            <th>Value</th>
+                            <th>Start</th>
+                            <th>End</th>
+                            <th>Active</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ORDERS CARD -->
+        <section class="card" id="ordersCard" style="display:none;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div style="font-size:1.13em;font-weight:500;">Customer Orders</div>
+            </div>
+            <div class="order-table-scroll">
+                <table id="ordersTable">
+                    <thead>
+                        <tr>
+                            <th>Customer</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Address</th>
+                            <th>Product</th>
+                            <th>Qty</th>
+                            <th>Status</th>
+                            <th>Payment</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- PRICE COMPARISON CARD (dedicated) -->
+        <section class="card" id="priceComparisonCard" style="display:none;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div style="font-size:1.13em;font-weight:500;">Price Comparison Settings</div>
+                <div style="display:flex;gap:10px;align-items:center;">
+                    <button class="btn small" id="pcAddCompetitorBtn"><span class="material-icons">add</span> Add
+                        competitor</button>
+                    <button class="btn accent" id="savePcSettingsBtn">Save Price Comparison Settings</button>
+                    <button class="btn" id="pcResetBtn">Reset to Defaults</button>
+                    <span id="pcSaveMsg" style="margin-left:12px; color:#218c6e; font-size:0.98em;"></span>
+                </div>
+            </div>
+
+            <div style="margin-top:12px;">
+                <label for="pc_global_margin">Global margin (%) — applied when competitor has no per-entry
+                    margin</label>
+                <input id="pc_global_margin" type="number" min="0" max="100" step="0.1" style="width:120px;">
+            </div>
+
+            <div
+                style="overflow:auto; max-height:420px; border:1px solid #eee; border-radius:6px; padding:8px; margin-top:10px;">
+                <table id="pcCompetitorsTable" style="width:100%;border-collapse:collapse;">
+                    <thead>
+                        <tr>
+                            <th style="text-align:left; width:220px">Competitor Brand</th>
+                            <th style="text-align:left; width:150px">Product ID (required)</th>
+                            <th style="text-align:left; width:220px">Product Name</th>
+                            <th style="text-align:left; width:140px">Our Price (auto)</th>
+                            <th style="text-align:left; width:160px">Competitor Price</th>
+                            <th style="width:70px"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- rows added dynamically by static/js/admin.js -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="font-size:0.9em;color:#666;margin-top:8px;">
+                Tip: Add competitor rows with a specific Product ID to scope that competitor to a product.
+                Admin-entered "Our Price" and "Competitor Price" are used by the comparison page in preference to
+                scraped values.
+            </div>
+        </section>
+
+    </main>
+
+    <div id="modalBg" class="modal-bg" style="display:none;">
+        <div class="modal" id="modalContent"></div>
+    </div>
+
+    <!-- Dedicated modal for adding Homepage Product (constrained to allowed sections).
+         This modal is independent of admin.js so we don't need to change admin.js. -->
+    <div id="hpModalBg" class="modal-bg" style="display:none;">
+        <div class="modal" id="hpModalContent" style="max-width:560px;">
+            <h3>Add Homepage Product</h3>
+            <form id="hpForm">
+                <label>Section</label>
+                <select name="section" required>
+                    <option value="signature">Our Signature Perfumes</option>
+                    <option value="men">Men's Brands</option>
+                    <option value="women">Women's Brands</option>
+                    <option value="offers">Hot Offers</option>
+                </select>
+
+                <label>Title</label>
+                <input name="title" required placeholder="Product title">
+
+                <label>Product ID (optional)</label>
+                <input name="product_id" placeholder="PRD001">
+
+                <label>Brand</label>
+                <input name="brand" placeholder="Brand name">
+
+                <label>Price (optional)</label>
+                <input name="price" type="number" step="0.01" min="0" placeholder="e.g. 49.99">
+
+                <label>Sort (integer)</label>
+                <input name="sort" type="number" value="0">
+
+                <label>Visible</label>
+                <select name="visible">
+                    <option value="true" selected>Yes</option>
+                    <option value="false">No</option>
+                </select>
+
+                <div style="display:flex;gap:12px;margin-top:12px;">
+                    <button type="submit" class="btn">Add</button>
+                    <button type="button" class="btn accent" id="hpCancel">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Load admin logic -->
+    <script src="/static/js/admin.js" defer></script>
+    <!-- New: robust price-compare wiring to auto-fill "Our Price" when a Product ID is entered -->
+    <script src="/static/js/admin-price-compare.js" defer></script>
+
+    <!-- Inline script to wire the dedicated Homepage Product modal and submit to API.
+         This is intentionally placed in admin.html (deferred) so admin.js is not changed. -->
+    <script defer>
+        (function () {
+            // small helper to POST JSON with credentials
+            async function postJson(url, data) {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                return res;
+            }
+
+            function el(id) { return document.getElementById(id); }
+            function showHpModal() { const bg = el('hpModalBg'); if (bg) bg.style.display = 'flex'; }
+            function closeHpModal() { const bg = el('hpModalBg'); if (bg) bg.style.display = 'none'; }
+
+            document.addEventListener('DOMContentLoaded', function () {
+                const addBtn = el('addHomepageBtn');
+                const hpCancel = el('hpCancel');
+                const hpForm = el('hpForm');
+
+                if (addBtn) addBtn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    showHpModal();
+                });
+
+                if (hpCancel) hpCancel.addEventListener('click', function () {
+                    closeHpModal();
+                });
+
+                if (hpForm) {
+                    hpForm.addEventListener('submit', async function (e) {
+                        e.preventDefault();
+                        const fd = new FormData(hpForm);
+                        const payload = {
+                            section: (fd.get('section') || '').toString().trim(),
+                            title: (fd.get('title') || '').toString().trim(),
+                            product_id: (fd.get('product_id') || '').toString().trim() || undefined,
+                            brand: (fd.get('brand') || '').toString().trim() || undefined,
+                            price: (fd.get('price') !== null && fd.get('price') !== '') ? parseFloat(fd.get('price')) : undefined,
+                            sort: parseInt(fd.get('sort') || '0', 10) || 0,
+                            visible: (fd.get('visible') === 'true')
+                        };
+
+                        // sanity: require section to be one of allowed values
+                        const allowed = ['signature', 'men', 'women', 'offers'];
+                        if (!allowed.includes(payload.section)) {
+                            alert('Invalid section; please choose one of the allowed homepage sections.');
+                            return;
+                        }
+                        if (!payload.title) {
+                            alert('Title is required.');
+                            return;
+                        }
+
+                        try {
+                            const res = await postJson('/api/homepage-products', payload);
+                            if (!res.ok) {
+                                const text = await res.text().catch(() => res.statusText);
+                                // use adminNotify if available, else alert
+                                if (typeof window.adminNotify === 'function') window.adminNotify('Failed to add homepage product: ' + text, 'error');
+                                else alert('Failed to add homepage product: ' + text);
+                                return;
+                            }
+                            // success
+                            if (typeof window.adminNotify === 'function') window.adminNotify('Homepage product added', 'success');
+                            else alert('Homepage product added');
+
+                            closeHpModal();
+
+                            // attempt to refresh the homepage table if admin.js provided a loader
+                            if (typeof window.loadHomepageProducts === 'function') {
+                                try { window.loadHomepageProducts(); } catch (e) { /* ignore */ }
+                            } else {
+                                // if loader is not available, reload so the newly added product shows up
+                                setTimeout(() => { location.reload(); }, 500);
+                            }
+                        } catch (err) {
+                            if (typeof window.adminNotify === 'function') window.adminNotify('Network error adding homepage product', 'error');
+                            else alert('Network error adding homepage product');
+                            console.warn('hpForm submit error', err);
+                        }
+                    });
+                }
+
+                // close modal when clicking outside
+                const hpBg = el('hpModalBg');
+                if (hpBg) {
+                    hpBg.addEventListener('click', function (ev) {
+                        if (ev.target === hpBg) closeHpModal();
+                    });
+                }
+            });
+        })();
+    </script>
+
+    <script defer>
+        (function () {
+            if (typeof window === 'undefined') return;
+            try {
+                if (typeof loadPriceComparisonSettings_v3 === 'function' && typeof window.loadPriceComparisonSettings_v3 !== 'function') {
+                    window.loadPriceComparisonSettings_v3 = loadPriceComparisonSettings_v3;
+                }
+                if (typeof savePriceComparisonSettings_v3 === 'function' && typeof window.savePriceComparisonSettings_v3 !== 'function') {
+                    window.savePriceComparisonSettings_v3 = savePriceComparisonSettings_v3;
+                }
+                if (typeof createPcRow_v3 === 'function' && typeof window.createPcRow_v3 !== 'function') {
+                    window.createPcRow_v3 = createPcRow_v3;
+                }
+                if (typeof collectPcTable_v3 === 'function' && typeof window.collectPcTable_v3 !== 'function') {
+                    window.collectPcTable_v3 = collectPcTable_v3;
+                }
+                if (window.console && typeof window.console.debug === 'function') {
+                    console.debug('admin: price-comparison helpers attached to window (if present)');
+                }
+            } catch (e) {
+                try { console.warn('admin: failed to attach price-comparison helpers', e); } catch (ignore) { /* ignore */ }
+            }
+        })();
+    </script>
+
+    <script defer>
+        (function () {
+            // Helper to safely parse numbers and format to 2 decimals
+            function formatPriceValue(v) {
+                const n = Number(v);
+                if (!isFinite(n) || isNaN(n)) return '';
+                return n.toFixed(2);
+            }
+
+            // Fetch product by id and set our-price & product-name inputs
+            async function fetchAndSetRowFields(tr) {
+                if (!tr || !tr.querySelector) return;
+                const prodInput = tr.querySelector('.pc-product-id');
+                const ourInput = tr.querySelector('.pc-our-price');
+                const nameInput = tr.querySelector('.pc-product-name');
+
+                if (!prodInput) return;
+
+                // ensure ourInput and nameInput exist; if ourInput missing, try to locate or create
+                if (!ourInput) {
+                    // fallback: create our-price cell at expected position (after product-name)
+                    const td = document.createElement('td');
+                    const inp = document.createElement('input');
+                    inp.type = 'text';
+                    inp.className = 'pc-our-price';
+                    inp.readOnly = true;
+                    inp.placeholder = 'auto';
+                    td.appendChild(inp);
+                    // try to insert before competitor price cell if exists
+                    const compPriceTd = tr.querySelector('.pc-competitor-price') ? tr.querySelector('.pc-competitor-price').closest('td') : null;
+                    if (compPriceTd) compPriceTd.parentNode.insertBefore(td, compPriceTd);
+                    else tr.appendChild(td);
+                }
+                if (!nameInput) {
+                    // create product-name td/input if missing
+                    const tdn = document.createElement('td');
+                    const inpName = document.createElement('input');
+                    inpName.type = 'text';
+                    inpName.className = 'pc-product-name';
+                    inpName.readOnly = true;
+                    inpName.placeholder = 'auto';
+                    tdn.appendChild(inpName);
+                    // insert after product-id cell
+                    const pidTd = prodInput.closest('td');
+                    if (pidTd && pidTd.parentNode) {
+                        pidTd.parentNode.insertBefore(tdn, pidTd.nextSibling);
+                    } else {
+                        tr.insertBefore(tdn, tr.firstChild ? tr.firstChild.nextSibling : null);
+                    }
+                }
+
+                // re-query now that we've possibly created elements
+                const ourEl = tr.querySelector('.pc-our-price');
+                const nameEl = tr.querySelector('.pc-product-name');
+
+                // If no product id set => clear the fields
+                const pid = (prodInput.value || '').trim();
+                if (!pid) {
+                    if (ourEl) ourEl.value = '';
+                    if (nameEl) nameEl.value = '';
+                    return;
+                }
+
+                try {
+                    const res = await fetch(`/api/product_by_id?product_id=${encodeURIComponent(pid)}`, { credentials: 'same-origin' });
+                    if (!res.ok) {
+                        // product not found
+                        if (ourEl) ourEl.value = '';
+                        if (nameEl) nameEl.value = '';
+                        return;
+                    }
+                    const js = await res.json();
+                    let price = null;
+                    if (js && (typeof js.price !== 'undefined')) price = js.price;
+                    else if (js && js.data && typeof js.data.price !== 'undefined') price = js.data.price;
+
+                    // product name fields: prefer title then name
+                    let pname = '';
+                    if (js && (js.title || js.name)) pname = js.title || js.name;
+                    else if (js && js.brand && js.title) pname = `${js.brand} — ${js.title}`;
+
+                    if (ourEl) ourEl.value = formatPriceValue(price);
+                    if (nameEl) nameEl.value = pname;
+                } catch (err) {
+                    console.warn('Failed to fetch product info for', pid, err);
+                    if (ourEl) ourEl.value = '';
+                    if (nameEl) nameEl.value = '';
+                }
+            }
+
+            // Wire up event handlers for a single table row and ensure "Product Name" cell exists
+            function wireRow(tr) {
+                if (!tr || !tr.querySelector) return;
+                const prodInput = tr.querySelector('.pc-product-id');
+                const ourInput = tr.querySelector('.pc-our-price');
+                // Ensure product-name input exists; if not, create immediately after product-id td
+                let nameInput = tr.querySelector('.pc-product-name');
+
+                if (!prodInput) return;
+
+                // create product-name cell if missing
+                if (!nameInput) {
+                    const pidTd = prodInput.closest('td');
+                    const td = document.createElement('td');
+                    const inp = document.createElement('input');
+                    inp.type = 'text';
+                    inp.className = 'pc-product-name';
+                    inp.readOnly = true;
+                    inp.placeholder = 'auto';
+                    td.appendChild(inp);
+                    if (pidTd && pidTd.parentNode) {
+                        pidTd.parentNode.insertBefore(td, pidTd.nextSibling);
+                    } else {
+                        // fallback append to the row (best-effort)
+                        tr.appendChild(td);
+                    }
+                    nameInput = inp;
+                }
+
+                // mark wired
+                if (tr.dataset._pc_wired === '1') {
+                    // still attempt an initial fetch if pid present
+                    if (prodInput.value && prodInput.value.trim()) {
+                        fetchAndSetRowFields(tr).catch(() => { });
+                    }
+                    return;
+                }
+                tr.dataset._pc_wired = '1';
+
+                // make our-price read-only and annotated if exists
+                const ourEl = tr.querySelector('.pc-our-price');
+                if (ourEl) {
+                    ourEl.readOnly = true;
+                    ourEl.placeholder = ourEl.placeholder || 'auto';
+                    ourEl.title = 'Auto-filled from product database (read-only)';
+                    ourEl.classList.add('pc-our-price-auto');
+                }
+
+                // ensure product-name input is read-only and labelled
+                const nameEl = tr.querySelector('.pc-product-name');
+                if (nameEl) {
+                    nameEl.readOnly = true;
+                    nameEl.placeholder = nameEl.placeholder || 'auto';
+                    nameEl.title = 'Auto-filled product name (read-only)';
+                    nameEl.classList.add('pc-product-name-auto');
+                }
+
+                const handler = () => { fetchAndSetRowFields(tr).catch(() => { }); };
+                prodInput.addEventListener('change', handler);
+                prodInput.addEventListener('blur', handler);
+
+                // initial population
+                if (prodInput.value && prodInput.value.trim()) {
+                    fetchAndSetRowFields(tr).catch(() => { });
+                }
+            }
+
+            function init() {
+                const tbody = document.querySelector('#pcCompetitorsTable tbody');
+                if (!tbody) return;
+
+                // wire existing rows
+                Array.from(tbody.querySelectorAll('tr')).forEach(wireRow);
+
+                // observe DOM changes to auto-wire newly added rows
+                const mo = new MutationObserver((mutations) => {
+                    for (const m of mutations) {
+                        for (const node of m.addedNodes) {
+                            if (!node) continue;
+                            if (node.nodeType === 1 && node.matches && node.matches('tr')) {
+                                wireRow(node);
+                            } else if (node.querySelectorAll) {
+                                Array.from(node.querySelectorAll('tr')).forEach(wireRow);
+                            }
+                        }
+                    }
+                });
+                mo.observe(tbody, { childList: true, subtree: true });
+
+                // If there is an existing loader for price comparison settings, wrap it to ensure wiring after load
+                const originalLoad = window.loadPriceComparisonSettings_v3;
+                if (typeof originalLoad === 'function') {
+                    window.loadPriceComparisonSettings_v3 = async function () {
+                        const res = await originalLoad();
+                        // short delay to allow rows to be inserted
+                        setTimeout(() => {
+                            Array.from(document.querySelectorAll('#pcCompetitorsTable tbody tr')).forEach(wireRow);
+                        }, 80);
+                        return res;
+                    };
+                }
+            }
+
+            // Run init when DOM ready
+            if (document.readyState === 'complete' || document.readyState === 'interactive') {
+                setTimeout(init, 0);
+            } else {
+                document.addEventListener('DOMContentLoaded', init);
+            }
+        })();
+    </script>
+
+    <div style="display:none">
+        <div class="user" id="userInfo">
+            <span class="material-icons">person</span>
+            <span id="usernameInfo"></span>
+        </div>
+        <h2 id="pageTitle">Brands</h2>
+    </div>
+</body>
+
+</html>

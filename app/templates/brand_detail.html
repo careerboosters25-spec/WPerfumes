@@ -1,0 +1,612 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title id="pageTitle">Product</title>
+
+    <!-- Site CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/brand_detail.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/announcements.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/footer.css') }}">
+
+    <style>
+        /* Lightweight page-specific overrides so the page is usable even without full CSS */
+        .product-page {
+            max-width: 1100px;
+            margin: 20px auto;
+            padding: 18px;
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 22px;
+            align-items: start;
+        }
+
+        .product-gallery {
+            background: #fff;
+            border-radius: 10px;
+            padding: 16px;
+            border: 1px solid #eee;
+        }
+
+        .product-main-image {
+            width: 100%;
+            height: 540px;
+            max-height: 60vh;
+            object-fit: contain;
+            background: #fafafa;
+            border-radius: 8px;
+        }
+
+        .thumbs {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .thumbs img {
+            width: 78px;
+            height: 78px;
+            object-fit: contain;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 1px solid #eee;
+            background: #fff;
+        }
+
+        .product-info {
+            background: #fff;
+            border-radius: 10px;
+            padding: 16px;
+            border: 1px solid #eee;
+        }
+
+        .product-title {
+            font-size: 1.45rem;
+            margin: 0;
+            color: #222;
+        }
+
+        .product-brand {
+            color: #666;
+            margin-top: 6px;
+        }
+
+        .price-row {
+            display: flex;
+            gap: 12px;
+            align-items: baseline;
+            margin-top: 10px;
+        }
+
+        .price {
+            font-size: 1.35rem;
+            color: #cc0000;
+            font-weight: 800;
+        }
+
+        .discounted-price {
+            font-size: 1.15rem;
+            color: #27ae60;
+            font-weight: 800;
+        }
+
+        .action-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 700;
+        }
+
+        .btn-primary {
+            background: #2d8f7c;
+            color: #fff;
+        }
+
+        .btn-buy {
+            background: #4aa3ff;
+            color: #fff;
+        }
+
+        .btn-disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .small-muted {
+            color: #666;
+            font-size: 0.95rem;
+        }
+
+        .notes {
+            margin-top: 12px;
+            color: #333;
+            line-height: 1.45;
+        }
+
+        .slider-section {
+            margin-top: 26px;
+            max-width: 1100px;
+            padding: 0 18px;
+            box-sizing: border-box;
+        }
+
+        .slider-window {
+            width: 100%;
+            overflow: hidden;
+            border-radius: 6px;
+        }
+
+        .slider-track {
+            display: flex;
+            gap: 14px;
+            padding: 8px 4px;
+            transition: transform 220ms ease;
+            will-change: transform;
+        }
+
+        .slider-track .product-card {
+            width: 220px;
+            flex: 0 0 auto;
+        }
+
+        @media (max-width: 980px) {
+            .product-page {
+                grid-template-columns: 1fr;
+            }
+
+            .product-main-image {
+                height: 420px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    {% include 'announcements.html' %}
+
+    <!-- Navbar (updated to match homepage navigation tabs & features) -->
+    <nav class="navbar" role="navigation" aria-label="Main navigation">
+        <div style="display:flex;align-items:center;gap:12px;">
+            <a class="brand-logo" href="{{ url_for('main.index') }}">WPerfumes</a>
+            <ul class="nav-tabs" role="menubar" aria-label="Site Menu">
+                <li><a href="{{ url_for('main.index') }}">Home</a></li>
+                <li><a href="{{ url_for('main.brands') }}">Fragrances</a></li>
+                <li><a href="/price-comparison">Compare Prices</a></li>
+                <li><a href="{{ url_for('main.history') }}">History</a></li>
+                <li><a href="{{ url_for('main.about') }}">About Us</a></li>
+            </ul>
+        </div>
+
+        <div class="navbar-center">
+            <div class="search-container">
+                <!-- keep id 'siteSearch' to preserve any existing scripts on brand_detail that reference it -->
+                <input id="siteSearch" type="text" placeholder="Search for scents, notes, or brands..."
+                    aria-label="Search">
+            </div>
+        </div>
+
+        <div class="navbar-right">
+            <a id="cartBtn" class="cart-btn" href="{{ url_for('main.cart') }}" aria-label="Open cart">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3e2723" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="9" cy="21" r="1"></circle>
+                    <circle cx="20" cy="21" r="1"></circle>
+                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61l1.38-8.19H6"></path>
+                </svg>
+                <span>Cart</span>
+                <span id="cartCountBadge" class="cart-count-badge" style="display:none;">0</span>
+            </a>
+
+            <div class="login-menu-container">
+                <a href="{{ url_for('main.login_page') }}" class="login-btn">Login</a>
+                <div class="login-submenu">
+                    <a href="{{ url_for('main.signup') }}" class="signup-btn">Sign Up</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- PRODUCT DETAIL -->
+    <main class="product-page" role="main" aria-labelledby="productTitle">
+        <section class="product-gallery" aria-label="Product media">
+            <img id="mainImage" class="product-main-image" alt="Product image"
+                src="{{ url_for('static', filename='images/placeholder.jpg') }}">
+            <div class="thumbs" id="thumbsContainer" aria-hidden="false"></div>
+            <!-- product-level payment UI removed: payments are handled in cart/checkout/paypal pages -->
+        </section>
+
+        <aside class="product-info" aria-label="Product information">
+            <h1 id="productTitle" class="product-title">Loading…</h1>
+            <div id="productBrand" class="product-brand small-muted"></div>
+
+            <div class="price-row" role="status" aria-live="polite">
+                <div id="priceStrike" style="text-decoration:line-through;color:#888;display:none;">$0.00</div>
+                <div id="priceNow" class="price">$0.00</div>
+                <div id="priceDiscount" class="discounted-price" style="display:none;"></div>
+            </div>
+
+            <div class="notes" id="productDescription">Loading description…</div>
+
+            <div class="action-row" style="margin-bottom:6px;">
+                <label for="qty" class="small-muted" style="margin-right:8px;">Qty</label>
+                <input id="qty" type="number" min="1" value="1"
+                    style="width:78px;padding:8px;border:1px solid #ddd;border-radius:6px;">
+            </div>
+
+            <div class="action-row">
+                <button id="addToCartBtn" class="btn btn-primary" type="button">Add to Cart</button>
+                <button id="buyNowBtn" class="btn btn-buy" type="button">Buy Now</button>
+                <div id="productActionMsg" class="small-muted" style="margin-left:8px;"></div>
+            </div>
+
+            <div style="margin-top:12px;">
+                <div class="small-muted">Free returns within 14 days. Secure payments with PayPal and major cards
+                    (handled at checkout).</div>
+            </div>
+        </aside>
+    </main>
+
+    <!-- "You may also like" slider -->
+    <section class="slider-section" aria-label="You may also like">
+        <h3>You may also like</h3>
+        <div class="slider-window" aria-hidden="false">
+            <div id="suggestedTrack" class="slider-track" role="list"></div>
+        </div>
+    </section>
+
+    <!-- Cart modal & checkout modal used by main.js (kept minimal so main.js can operate) -->
+    <div id="cartModalBg" class="cart-modal-bg" aria-hidden="true">
+        <div class="cart-modal-content" id="cartModal" role="dialog" aria-modal="true" aria-label="Cart">
+            <button id="cartModalCloseBtn" class="cart-modal-close" aria-label="Close cart">✕</button>
+            <div class="cart-modal-header">Shopping Cart</div>
+            <div id="cartDiscountInfo" class="discount-info" style="display:none;"></div>
+            <div id="cartList" class="cart-list" aria-live="polite"></div>
+            <div class="cart-modal-footer">
+                <div id="cartModalTotal" class="cart-modal-total"></div>
+                <div style="flex:1"></div>
+                <a id="openCheckoutFromCart" class="btn-primary" href="{{ url_for('main.checkout') }}">Checkout</a>
+            </div>
+        </div>
+    </div>
+
+    <div id="checkoutModalBg" class="cart-modal-bg" aria-hidden="true">
+        <div id="checkoutModalContent" class="cart-modal-content" role="dialog" aria-modal="true" aria-label="Checkout">
+            <button id="checkoutModalCloseBtn" aria-label="Close checkout" class="cart-modal-close">✕</button>
+            <h2>Checkout</h2>
+            <div id="checkoutDiscountInfo" class="discount-info" style="display:none"></div>
+            <div id="cartSection" aria-live="polite"></div>
+
+            <!-- Payment selection removed from product page. Payment controls and PayPal rendering
+                 should be implemented in cart.html / checkout.html / paypal.js. -->
+
+            <form id="orderForm" style="margin-top:12px;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                    <input id="customer" name="customer" placeholder="Full name" required
+                        style="padding:8px;border:1px solid #ddd;border-radius:6px;">
+                    <input id="email" name="email" type="email" placeholder="Email" required
+                        style="padding:8px;border:1px solid #ddd;border-radius:6px;">
+                    <input id="phone" name="phone" type="text" placeholder="Phone"
+                        style="padding:8px;border:1px solid #ddd;border-radius:6px;">
+                    <input id="date" name="date" type="datetime-local"
+                        style="padding:8px;border:1px solid #ddd;border-radius:6px;">
+                </div>
+                <div style="margin-top:10px;">
+                    <textarea id="address" name="address" rows="3" placeholder="Shipping address"
+                        style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;"></textarea>
+                </div>
+                <div id="orderMsg" style="margin-top:10px;"></div>
+                <div class="form-buttons" style="margin-top:12px;">
+                    <button id="checkoutBtn" type="submit" class="btn btn-primary">Place Order</button>
+                    <!-- modal Buy Now and modal PayPal container removed; payment handled in checkout/cart pages -->
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Order confirmation modal -->
+    <div id="orderConfirmationModalBg" class="cart-modal-bg" style="display:none;">
+        <div id="orderConfirmationModalContent" class="cart-modal-content" style="max-width:400px;text-align:center;">
+            <button id="orderConfirmationModalCloseBtn" title="Close"
+                style="position:absolute;top:10px;right:18px;font-size:1.5em;background:none;border:none;cursor:pointer;">&times;</button>
+            <div id="orderConfirmationMsg" style="margin:40px 0 15px 0;"></div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="main-footer">
+        <div class="footer-card footer-card-1">
+            <div>
+                <h3>Connect with Us</h3>
+                <div class="social-icons-row">
+                    <a href="#" class="social-icon" aria-label="Follow us on Facebook"><i
+                            class="fab fa-facebook-f"></i></a>
+                    <a href="#" class="social-icon" aria-label="Follow us on Instagram"><i
+                            class="fab fa-instagram"></i></a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">&copy; WPerfumes</div>
+    </footer>
+
+    <!-- Shared site script (main.js) - this wires up modals and cart UI -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+    <script>
+        (function () {
+            // Safe helpers
+            const API = "/api";
+            const placeholder = "{{ url_for('static', filename='images/placeholder.jpg') }}";
+
+            function toStaticUrl(url) {
+                if (!url) return placeholder;
+                if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/')) return url;
+                return `/static/${url}`;
+            }
+
+            function formatPrice(n) {
+                return `$${(Number(n) || 0).toFixed(2)}`;
+            }
+
+            // Read query params to identify which product to load (brand & product)
+            const params = new URLSearchParams(window.location.search);
+            const brandParam = params.get('brand') || '';
+            const productParam = params.get('product') || '';
+            // Prefer explicit product_id when present (this fixes ambiguity introduced by title-slugs)
+            const productIdParam = params.get('product_id') || '';
+
+            // UI elements
+            const mainImage = document.getElementById('mainImage');
+            const thumbsContainer = document.getElementById('thumbsContainer');
+            const titleEl = document.getElementById('productTitle');
+            const brandEl = document.getElementById('productBrand');
+            const priceNow = document.getElementById('priceNow');
+            const priceStrike = document.getElementById('priceStrike');
+            const priceDiscount = document.getElementById('priceDiscount');
+            const descEl = document.getElementById('productDescription');
+            const qtyEl = document.getElementById('qty');
+            const addToCartBtn = document.getElementById('addToCartBtn');
+            const buyNowBtn = document.getElementById('buyNowBtn');
+            const actionMsg = document.getElementById('productActionMsg');
+            const suggestedTrack = document.getElementById('suggestedTrack');
+
+            let productData = null;
+
+            async function fetchProduct() {
+                try {
+                    // If product_id provided, use the authoritative "by id" endpoint.
+                    if (productIdParam) {
+                        const resId = await fetch(`${API}/product_by_id?product_id=${encodeURIComponent(productIdParam)}`);
+                        if (resId.ok) {
+                            const jsid = await resId.json();
+                            return jsid;
+                        }
+                        // if product_id failed, fallthrough to try by brand+slug.
+                    }
+
+                    // fallback: use brand + product slug/title
+                    if (productParam) {
+                        const apiUrl = `${API}/product?brand=${encodeURIComponent(brandParam)}&product=${encodeURIComponent(productParam)}`;
+                        const res = await fetch(apiUrl);
+                        if (!res.ok) throw new Error('Product not found via brand+slug');
+                        const js = await res.json();
+                        return js;
+                    }
+
+                    // final fallback: try to get a first product from /products
+                    const res2 = await fetch(`${API}/products`);
+                    if (!res2.ok) return null;
+                    const list = await res2.json();
+                    return list && list[0] ? list[0] : null;
+                } catch (err) {
+                    // fallback: try public products endpoint
+                    try {
+                        const res2 = await fetch(`${API}/products`);
+                        if (!res2.ok) return null;
+                        const list = await res2.json();
+                        return list && list[0] ? list[0] : null;
+                    } catch (e) {
+                        return null;
+                    }
+                }
+            }
+
+            function renderProduct(p) {
+                if (!p) {
+                    titleEl.textContent = 'Product not found';
+                    descEl.textContent = '';
+                    priceNow.textContent = '$0.00';
+                    return;
+                }
+                productData = p;
+                titleEl.textContent = p.title || p.name || 'Untitled';
+                brandEl.textContent = p.brand || '';
+                const priceVal = parseFloat(p.price || 0);
+                const discountPercent = (window.checkoutDiscountPercent || 0);
+                if (discountPercent > 0) {
+                    const discounted = priceVal * (1 - discountPercent / 100);
+                    priceStrike.style.display = 'inline-block';
+                    priceStrike.textContent = formatPrice(priceVal);
+                    priceNow.textContent = formatPrice(discounted);
+                    priceDiscount.style.display = 'inline-block';
+                    priceDiscount.textContent = `(-${discountPercent}% Off)`;
+                } else {
+                    priceStrike.style.display = 'none';
+                    priceNow.textContent = formatPrice(priceVal);
+                    priceDiscount.style.display = 'none';
+                }
+                descEl.innerHTML = p.description || p.short_description || '';
+
+                // images / thumbs
+                const imgs = [];
+                if (p.image_url) imgs.push(p.image_url);
+                if (p.images && Array.isArray(p.images)) imgs.push(...p.images);
+                if (imgs.length === 0) imgs.push('{{ url_for("static", filename="images/placeholder.jpg") }}');
+
+                mainImage.src = toStaticUrl(imgs[0]);
+                thumbsContainer.innerHTML = '';
+                imgs.forEach((src, idx) => {
+                    const img = document.createElement('img');
+                    img.src = toStaticUrl(src);
+                    img.alt = `${p.title} ${idx + 1}`;
+                    img.addEventListener('click', () => { mainImage.src = img.src; });
+                    thumbsContainer.appendChild(img);
+                });
+            }
+
+            // add to cart behaviour
+            addToCartBtn.addEventListener('click', function () {
+                const qty = Math.max(1, parseInt(qtyEl.value || '1', 10));
+                let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+                const id = productData && productData.id ? productData.id : (productIdParam || productParam || (new Date()).getTime().toString());
+                const existing = cart.find(i => ('' + i.id) === ('' + id));
+                const image = (productData && productData.image_url) ? toStaticUrl(productData.image_url) : (mainImage.src || toStaticUrl(''));
+                if (existing) {
+                    existing.quantity = (existing.quantity || 0) + qty;
+                } else {
+                    cart.push({
+                        id: id,
+                        title: productData.title || productData.name || '',
+                        brand: productData.brand || '',
+                        price: Number(productData.price || 0),
+                        image: image,
+                        quantity: qty
+                    });
+                }
+                localStorage.setItem('cart', JSON.stringify(cart));
+                // best-effort notify server about order attempt (non-blocking)
+                try {
+                    fetch(`${API}/order-attempts`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: '', product: productData.title || '', qty: qty, status: 'Carted' })
+                    }).catch(() => { });
+                } catch (e) { }
+
+                actionMsg.textContent = 'Added to cart';
+                actionMsg.style.color = '#27ae60';
+                // open checkout modal using the site's shared function from main.js if available
+                if (typeof openCheckoutModal === 'function') {
+                    openCheckoutModal();
+                }
+            });
+
+            // Buy Now: simplified behavior — add to cart and open checkout flow (payments handled in checkout)
+            buyNowBtn.addEventListener('click', async function () {
+                const qty = Math.max(1, parseInt(qtyEl.value || '1', 10));
+
+                const item = {
+                    id: productData && productData.id ? productData.id : (productIdParam || productParam || (new Date()).getTime().toString()),
+                    title: productData.title || productData.name || '',
+                    unit_price: parseFloat(productData.price || 0) || 0,
+                    quantity: qty,
+                    currency: 'USD'
+                };
+
+                // store single-item checkout info for checkout page if needed (non-blocking)
+                try { localStorage.setItem('pending_buy_item', JSON.stringify(item)); } catch (e) { }
+
+                // add item to cart
+                let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+                const id = item.id;
+                const existing = cart.find(i => ('' + i.id) === ('' + id));
+                if (existing) existing.quantity = (existing.quantity || 0) + item.quantity;
+                else cart.push({ id, title: item.title, brand: productData.brand || '', price: item.unit_price, image: mainImage.src || '', quantity: item.quantity });
+                localStorage.setItem('cart', JSON.stringify(cart));
+
+                actionMsg.textContent = 'Proceed to checkout';
+                actionMsg.style.color = '#000';
+
+                // open checkout modal or redirect to checkout page; actual payment UI lives on checkout/cart pages
+                if (typeof openCheckoutModal === 'function') {
+                    openCheckoutModal();
+                } else {
+                    window.location.href = '/checkout';
+                }
+            });
+
+            // Suggested products (simple fetch of 8 items)
+            async function loadSuggestions() {
+                try {
+                    const res = await fetch(`${API}/products?limit=12`);
+                    if (!res.ok) return;
+                    const list = await res.json();
+                    suggestedTrack.innerHTML = '';
+                    (list || []).forEach(p => {
+                        const card = document.createElement('div');
+                        card.className = 'product-card';
+                        const priceVal = parseFloat(p.price || 0);
+                        const discounted = (window.checkoutDiscountPercent || 0) ? (priceVal * (1 - window.checkoutDiscountPercent / 100)).toFixed(2) : null;
+                        card.innerHTML = `
+                <a href="/brand_detail?brand=${encodeURIComponent(p.brand || '')}&product=${encodeURIComponent((p.title || p.name || '').replace(/ /g, '_'))}">
+                  <div style="padding:8px;text-align:center;">
+                    <img src="${toStaticUrl(p.image_url || '')}" alt="${p.title}" style="width:100%;height:160px;object-fit:contain;border-radius:6px;background:#fff;border:1px solid #eee;">
+                    <h4 style="font-size:0.95rem;margin:8px 0 4px;">${p.title}</h4>
+                    <div style="color:#888;font-size:0.9rem;">${p.brand || ''}</div>
+                  </div>
+                </a>
+                <div style="padding:8px;display:flex;gap:8px;justify-content:space-between;align-items:center;">
+                  <div style="font-weight:700;color:#cc0000;">$${priceVal.toFixed(2)}</div>
+                  <button class="mini-buy btn btn-buy" data-id="${p.id}" data-title="${p.title}" data-price="${priceVal}" data-image="${p.image_url}">Buy</button>
+                </div>
+            `;
+                        suggestedTrack.appendChild(card);
+                    });
+
+                    // attach mini-buy handlers
+                    document.querySelectorAll('.mini-buy').forEach(b => {
+                        b.addEventListener('click', function (e) {
+                            e.preventDefault(); e.stopPropagation();
+                            const id = this.getAttribute('data-id') || new Date().getTime();
+                            const title = this.getAttribute('data-title') || '';
+                            const price = parseFloat(this.getAttribute('data-price') || 0);
+                            const image = this.getAttribute('data-image') ? toStaticUrl(this.getAttribute('data-image')) : '';
+                            let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+                            const existing = cart.find(i => ('' + i.id) === ('' + id));
+                            if (existing) existing.quantity = (existing.quantity || 0) + 1;
+                            else cart.push({ id, title, price, image, quantity: 1 });
+                            localStorage.setItem('cart', JSON.stringify(cart));
+                            if (typeof openCheckoutModal === 'function') openCheckoutModal();
+                        });
+                    });
+
+                } catch (err) {
+                    console.warn('loadSuggestions failed', err);
+                }
+            }
+
+            // On load, fetch the product and suggestions
+            (async function init() {
+                // Ensure global discount loaded if main.js provides it
+                if (typeof fetchDiscountPercent === 'function') {
+                    try { await fetchDiscountPercent(); } catch (e) { /* ignore */ }
+                }
+                const p = await fetchProduct();
+                renderProduct(p);
+                loadSuggestions();
+
+                // NOTE: All payment rendering and card/PayPal integrations were intentionally removed
+                // from this product page and its JS. Payment UI should be implemented in cart.html,
+                // checkout.html and in the dedicated paypal.js helper so the checkout flow is centralized.
+            })();
+        })();
+    </script>
+
+    <!-- Optional: Font Awesome for icons (deferred) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+</body>
+
+</html>

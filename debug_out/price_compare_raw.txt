@@ -1,0 +1,1 @@
+{"comparisons":[{"competitor_price":410.0,"effective_price":410.0,"error":null,"found_price":null,"manual_price":410.0,"margin":0.0,"name":"VPerfumes","our_price":350.0,"product_id":"PRD001","url":null}],"ours_is_cheapest":true,"product":{"brand":"Creed","id":"PRD001","price":350.0,"title":"Aventus"}}

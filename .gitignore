@@ -1,0 +1,23 @@
+# Python / project
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+
+# Virtualenv
+.venv/
+venv/
+ENV/
+
+# Env files and secrets
+.env
+.env.local
+app/*.env
+instance/*.env
+wperfumes_render_backup.dump
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store

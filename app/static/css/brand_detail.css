@@ -1,0 +1,622 @@
+:root {
+    --light-brown: #d7ccc8;
+    --dark-text: #3e2723;
+    --muted: #757575;
+    --light-silver: #e0e0e0;
+    --white-bg: #ffffff;
+    --dark-accent: #000000;
+    --footer-link-color: #5d4037;
+    --light-green: #c8e6c9;
+    --accent: #2d8f7c;
+    --sale-red: #e53935;
+    --primary-white: #ffffff;
+    --shadow: 0 6px 24px rgba(0, 0, 0, 0.06);
+    --radius: 8px;
+    --max-content-width: 1100px;
+    --container-padding: 12px;
+    --font-serif: Georgia, 'Times New Roman', serif;
+    --font-sans: Roboto, Arial, sans-serif;
+}
+
+/* Page-only site container
+   This keeps announcement, navbar, main and footer aligned to the same centered width
+   without touching site-wide main.css. */
+.site-container {
+    max-width: var(--max-content-width);
+    margin: 0 auto;
+    padding: 0 var(--container-padding);
+    box-sizing: border-box;
+}
+
+/* make direct children fill the container width */
+.site-container>.announcement-bar,
+.site-container>.navbar,
+.site-container>main,
+.site-container>footer {
+    width: 100%;
+}
+
+/* small-screen tweak for the container gutters */
+@media (max-width: 480px) {
+    .site-container {
+        padding: 0 8px;
+    }
+}
+
+/* Reset / base */
+html,
+body {
+    margin: 0;
+    padding: 0;
+    background: var(--white-bg);
+    color: var(--dark-text);
+    font-family: var(--font-serif);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+    color: inherit;
+}
+
+/* Navbar */
+.navbar {
+    background-color: var(--light-brown);
+    padding: 10px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+    border-bottom: 1px solid var(--light-silver);
+    position: sticky;
+    top: 0;
+    z-index: 60;
+}
+
+.navbar-left {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+}
+
+.brand-logo {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--dark-text);
+    text-decoration: none;
+    letter-spacing: 0.6px;
+    display: inline-block;
+}
+
+.nav-tabs {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.nav-tabs li a {
+    padding: 8px 12px;
+    border-radius: 6px;
+    text-decoration: none;
+    color: var(--dark-text);
+    transition: background-color 0.18s;
+    font-size: 14px;
+}
+
+.nav-tabs li a:hover {
+    background: var(--light-green);
+    color: var(--dark-accent);
+}
+
+.navbar-center {
+    flex: 1;
+    max-width: 560px;
+    margin: 0 12px;
+}
+
+.search-container input[type="text"] {
+    width: 100%;
+    padding: 8px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--light-silver);
+    background: linear-gradient(180deg, #fbfbfb, #fff);
+    outline: none;
+    font-size: 14px;
+}
+
+.search-container input[type="text"]:focus {
+    box-shadow: 0 0 0 3px rgba(45, 143, 124, 0.06);
+    border-color: var(--accent);
+}
+
+.navbar-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.cart-btn,
+.login-btn {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 10px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 14px;
+    border: 1px solid transparent;
+}
+
+/* Active (current) navbar item styling — used to mark Cart as active on this page */
+.cart-btn.nav-active,
+.navbar-right .cart-btn[aria-current="page"] {
+    background: var(--accent);
+    color: #ffffff;
+    box-shadow: 0 6px 18px rgba(45, 143, 124, 0.12);
+    border-color: rgba(255, 255, 255, 0.06);
+}
+
+/* ensure the svg inherits color when we use stroke="currentColor" on svg */
+.cart-btn.nav-active svg,
+.navbar-right .cart-btn[aria-current="page"] svg {
+    color: inherit;
+}
+
+.cart-btn svg,
+.login-btn svg {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.cart-count-badge {
+    background: var(--sale-red);
+    color: var(--primary-white);
+    border-radius: 12px;
+    padding: 2px 6px;
+    font-size: 12px;
+    font-weight: 700;
+    margin-left: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Main layout
+   Use the .site-container to control the content width; make main fill the container. */
+main {
+    width: 100%;
+    margin: 18px 0;
+    padding: 0 var(--container-padding);
+}
+
+/* Product panel (card around the main product row) */
+.product-panel {
+    background: #ffffff;
+    padding: 18px;
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    border: 1px solid rgba(45, 143, 124, 0.06);
+    margin-bottom: 18px;
+}
+
+/* ENHANCED THREE COLUMN LAYOUT */
+.main-product-row {
+    display: flex;
+    gap: 36px;
+    align-items: flex-start;
+    justify-content: space-between;
+
+    /* Ensures the row tries to remain horizontal on desktop */
+    flex-wrap: nowrap;
+}
+
+/* Force row layout when viewport is large enough (avoid accidental stacking) */
+@media (min-width: 901px) {
+    .main-product-row {
+        flex-direction: row;
+    }
+}
+
+/* LEFT COLUMN: IMAGE + THUMBNAILS */
+.image-section {
+    /* prefer a fixed-ish column for the image so center + right can flex */
+    flex: 0 0 260px;
+    min-width: 210px;
+    max-width: 300px;
+    background: #f8f8fc;
+    padding: 22px 0 22px 0;
+    border-radius: 18px;
+    box-shadow: 0 2px 8px rgba(44, 62, 80, 0.05);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.product-image-wrapper {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius);
+    background: #f9f9f9;
+    width: 100%;
+    max-width: 260px;
+    height: 260px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    position: relative;
+    margin-bottom: 14px;
+    /* space between main image and thumbnails */
+}
+
+#productImage {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 6px;
+    transition: transform 0.18s ease;
+    background: #fff;
+    display: block;
+}
+
+.product-image-wrapper:hover #productImage {
+    transform: scale(1.02);
+}
+
+.product-panel {
+    /* Make background almost fully opaque (preserves child element appearance) */
+    background: rgba(255, 255, 255, 0.98);
+    padding: 18px;
+    border-radius: 14px;
+
+    /* Stronger shadow for more separation */
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+
+    /* Slightly more visible green-tinted border */
+    border: 1px solid rgba(45, 143, 124, 0.12);
+
+    margin-bottom: 18px;
+}
+
+.thumbnails-col {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    align-items: center;
+    width: 100%;
+    justify-content: center;
+    margin-bottom: 0;
+}
+
+.thumbnail-img {
+    width: 56px;
+    height: 56px;
+    object-fit: contain;
+    border-radius: 8px;
+    background: #fff;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform 0.14s, border-color 0.14s, box-shadow 0.14s;
+}
+
+.thumbnail-img:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.thumbnail-img.selected {
+    border-color: var(--accent);
+    box-shadow: 0 6px 20px rgba(45, 143, 124, 0.12);
+}
+
+/* CENTER COLUMN: INFO */
+.info-section {
+    /* flexible center column — grows/shrinks to fit available space */
+    flex: 1 1 440px;
+    min-width: 260px;
+    max-width: 560px;
+    padding: 12px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#productName {
+    margin: 0 0 6px 0;
+    font-size: 26px;
+    color: var(--dark-accent);
+}
+
+#brandName {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--muted);
+    font-size: 14px;
+}
+
+#productPrice {
+    font-size: 20px;
+    color: var(--sale-red);
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+#subtitle {
+    display: block;
+    color: var(--muted);
+    font-style: italic;
+    margin-bottom: 8px;
+}
+
+.product-actions {
+    margin: 14px 0 10px 0;
+    display: flex;
+    gap: 18px;
+}
+
+.cta-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    border-radius: 8px;
+    padding: 10px 18px;
+    background: var(--accent);
+    color: var(--primary-white);
+    border: none;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.14s, transform 0.08s;
+}
+
+.cta-button:hover {
+    background: #277862;
+    transform: translateY(-1px);
+}
+
+.cta-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 14px;
+    border-radius: 8px;
+    background: #f0f0f0;
+    border: 1px solid #e6e6e6;
+    cursor: pointer;
+}
+
+/* specs (Key Notes) with green underline similar to fragrances.html */
+.specs {
+    margin-top: auto;
+    /* Key notes stick to bottom */
+    font-size: 14px;
+}
+
+.specs h4 {
+    margin: 8px 0 6px 0;
+    font-size: 14px;
+    color: var(--dark-accent);
+    border-bottom: 3px solid var(--accent);
+    padding-bottom: 6px;
+    display: inline-block;
+}
+
+/* RIGHT COLUMN: DETAILS */
+.details-section {
+    /* right column should be slightly narrower but flexible */
+    flex: 0 0 360px;
+    min-width: 220px;
+    max-width: 400px;
+    padding: 14px 0 14px 18px;
+    border-left: 1.5px solid #f0f0f0;
+    background: #fafbff;
+    border-radius: 0 18px 18px 0;
+}
+
+.details-section h4 {
+    font-size: 1.15em;
+    margin-top: 0;
+    color: var(--dark-accent);
+    border-bottom: 3px solid var(--accent);
+    padding-bottom: 6px;
+    display: inline-block;
+}
+
+/* Rich description formatting */
+.rich-description {
+    font-size: 1.04em;
+    line-height: 1.7;
+    color: #424242;
+    padding-top: 6px;
+}
+
+.rich-description ul,
+.rich-description ol {
+    margin: 10px 0 10px 20px;
+    padding-left: 18px;
+}
+
+.rich-description strong,
+.rich-description b {
+    font-weight: bold;
+}
+
+.rich-description em,
+.rich-description i {
+    font-style: italic;
+}
+
+.rich-description p {
+    margin: 8px 0;
+}
+
+.rich-description .emoji {
+    font-size: 1.2em;
+    margin-right: 2px;
+}
+
+/* Similar products slider */
+.slider-section {
+    margin-top: 18px;
+    padding: 12px;
+}
+
+#similarProducts h3 {
+    margin: 0 0 10px 0;
+    font-size: 18px;
+    color: var(--dark-accent);
+}
+
+.slider-window {
+    overflow: hidden;
+    border-radius: 8px;
+    background: #fafafa;
+    padding: 12px;
+}
+
+.slider-track {
+    display: flex;
+    gap: 12px;
+    transition: transform 0.24s ease;
+}
+
+.slider-card {
+    width: 140px;
+    flex: 0 0 140px;
+    background: white;
+    border-radius: 8px;
+    padding: 10px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.04);
+    text-align: center;
+}
+
+.slider-card img {
+    width: 110px;
+    height: 110px;
+    object-fit: contain;
+    border-radius: 6px;
+    background: #fff;
+    margin-bottom: 6px;
+}
+
+.slider-card .slider-title {
+    font-weight: 700;
+    font-size: 13px;
+    color: #333;
+}
+
+/* Footer
+   Use .site-footer to align with the site container above. */
+.site-footer {
+    padding: 18px 0;
+    color: var(--dark-text);
+    font-size: 0.95rem;
+    background: var(--light-brown);
+    border-top: 1px solid var(--light-silver);
+}
+
+/* footer inner container should fill the site-container width */
+.site-footer .footer-inner,
+.site-footer .footer-container {
+    width: 100%;
+    margin: 0;
+    padding: 0 var(--container-padding);
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+}
+
+/* Responsive
+   Criteria: keep three-column layout on desktop, stack for narrower devices. */
+@media (max-width: 1100px) {
+    .main-product-row {
+        gap: 18px;
+    }
+
+    .details-section {
+        max-width: 320px;
+        min-width: 0;
+        padding-left: 12px;
+    }
+
+    .image-section {
+        max-width: 210px;
+    }
+}
+
+/* Stack vertically on small screens only */
+@media (max-width: 900px) {
+    .main-product-row {
+        flex-direction: column;
+        gap: 16px;
+        /* allow items to wrap/stack on smaller widths */
+        flex-wrap: wrap;
+    }
+
+    .details-section,
+    .image-section,
+    .info-section {
+        max-width: 100%;
+        min-width: 0;
+        padding-left: 0;
+        border-left: none;
+        border-radius: 18px;
+    }
+
+    .details-section {
+        margin-top: 18px;
+        background: #f7f8fa;
+    }
+
+    .thumbnails-col {
+        flex-direction: row;
+        gap: 8px;
+    }
+}
+
+@media (max-width: 600px) {
+    .product-image-wrapper {
+        height: 180px;
+        max-width: 90vw;
+    }
+
+    .thumbnail-img {
+        width: 38px;
+        height: 38px;
+    }
+
+    .product-actions {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    .info-section {
+        padding: 6px 0;
+    }
+
+    .details-section {
+        padding: 6px 0;
+    }
+
+    .thumbnails-col {
+        gap: 6px;
+    }
+}
+
+/* Utility classes */
+.hidden {
+    display: none !important;
+}
+
+.muted {
+    color: var(--muted);
+    font-size: 0.95em;
+}
+
+.small {
+    font-size: 13px;
+}

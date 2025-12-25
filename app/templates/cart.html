@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Your Cart - WPerfumes</title>
+
+    <!-- Use Flask static helper for CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+
+    <style>
+        /* Page-specific styles (kept small; main site styles live in css/main.css) */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background: #f9f9f9;
+            color: #222;
+        }
+
+        .container {
+            max-width: 760px;
+            margin: 36px auto;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 6px 30px rgba(0, 0, 0, 0.06);
+            padding: 20px;
+        }
+
+        h2 {
+            margin-top: 0;
+            font-size: 22px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 18px;
+        }
+
+        th,
+        td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #eee;
+            vertical-align: middle;
+        }
+
+        th {
+            background: #fafafa;
+            text-align: left;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .qty-control-btn {
+            background: #f0f0f0;
+            color: #333;
+            border: 1px solid #ccc;
+            padding: 0 8px;
+            border-radius: 4px;
+            font-size: 1em;
+            line-height: 1;
+            width: 30px;
+            height: 30px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .checkout-link {
+            background: #2d8f7c;
+            color: #fff;
+            padding: 10px 22px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 1em;
+            display: inline-block;
+            margin-top: 12px;
+            transition: transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+        }
+
+        .checkout-link:hover {
+            background: #218c6e;
+        }
+
+        .cart-empty {
+            color: #e74c3c;
+            text-align: center;
+            font-size: 1.1em;
+            margin: 30px 0;
+        }
+
+        .discount-info {
+            background: #f1c40f1a;
+            color: #b8860b;
+            border-radius: 4px;
+            padding: 7px 10px;
+            font-size: 1em;
+            font-weight: 500;
+            margin-bottom: 14px;
+            display: inline-flex;
+            gap: 8px;
+            align-items: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+
+        .cod-available {
+            background: #e7f7ee;
+            color: #218c6e;
+            border-radius: 6px;
+            padding: 8px 12px;
+            margin-bottom: 12px;
+            font-size: 0.96em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .remove-btn {
+            background: #e74c3c;
+            color: #fff;
+            border: none;
+            padding: 6px 9px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .small-muted {
+            font-size: 0.95em;
+            color: #666;
+        }
+
+        .total-row td {
+            font-weight: 700;
+            font-size: 1.02em;
+            padding-top: 12px;
+        }
+
+        /* Modal (single popup) */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1200;
+        }
+
+        .modal {
+            background: #fff;
+            width: 92%;
+            max-width: 960px;
+            border-radius: 12px;
+            padding: 18px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+            max-height: 90vh;
+            overflow: auto;
+        }
+
+        .modal .grid {
+            display: grid;
+            grid-template-columns: 1fr 360px;
+            gap: 18px;
+            align-items: start;
+        }
+
+        .modal .cart-summary {
+            background: #fafafa;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #eee;
+        }
+
+        .modal-close {
+            float: right;
+            background: transparent;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        /* Active look for modal buttons */
+        .btn-active {
+            box-shadow: 0 6px 18px rgba(45, 143, 124, 0.18);
+            transform: translateY(-2px);
+        }
+
+        /* Disabled look */
+        .btn-disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+            filter: grayscale(10%);
+            box-shadow: none !important;
+            transform: none !important;
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                margin: 12px;
+                padding: 14px;
+            }
+
+            th,
+            td {
+                padding: 8px 6px;
+            }
+
+            .checkout-link {
+                width: 100%;
+                text-align: center;
+                display: block;
+            }
+
+            .modal .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container" role="main" aria-labelledby="cart-heading">
+        <h2 id="cart-heading">Your Cart</h2>
+
+        <div id="discountPercentInfo" class="discount-info" style="display:none;" aria-live="polite"></div>
+
+        <div id="cartSection" aria-live="polite"></div>
+
+        <div class="cod-available" aria-hidden="false">
+            <span>✔ Cash on Delivery Available</span>
+            <span style="font-size:0.95em; color:#218c6e;">Pay at your doorstep</span>
+        </div>
+
+        <!-- Open modal instead of navigating to a separate checkout page -->
+        <a id="checkoutBtnLink" class="checkout-link" href="#" onclick="openCheckoutModal(event)">Proceed to
+            Checkout</a>
+    </div>
+
+    <!-- Checkout Modal: combined cart + checkout in one popup -->
+    <div id="checkoutBackdrop" class="modal-backdrop" aria-hidden="true">
+        <div role="dialog" aria-modal="true" aria-labelledby="checkoutModalTitle" class="modal" id="checkoutModal">
+            <button class="modal-close" aria-label="Close checkout" onclick="closeCheckoutModal()">✕</button>
+            <h3 id="checkoutModalTitle" style="margin-top:0">Checkout</h3>
+
+            <div id="modalDiscountInfo" class="discount-info" style="display:none;" aria-live="polite"></div>
+
+            <div class="grid" id="modalGrid">
+                <!-- Left: Customer form -->
+                <div>
+                    <form id="modalOrderForm">
+                        <div class="form-group">
+                            <label for="modal_customer">Full Name</label>
+                            <input id="modal_customer" name="customer" required type="text" autocomplete="name" />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="modal_email">Email Address</label>
+                            <input id="modal_email" name="email" required type="email" autocomplete="email" />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="modal_phone">Phone Number</label>
+                            <input id="modal_phone" name="phone" type="text" autocomplete="tel" />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="modal_address">Shipping Address</label>
+                            <textarea id="modal_address" name="address" rows="3" required></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="modal_paymentSelect">Select Payment Method</label>
+                            <select id="modal_paymentSelect" name="payment_method" class="payment-select" required>
+                                <option value="Cash on Delivery" selected>Cash on Delivery</option>
+                                <option value="Visa/Mastercard">Visa/Mastercard</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="modal_date">Desired Delivery / Order Date</label>
+                            <input id="modal_date" name="date" type="datetime-local" />
+                        </div>
+
+                        <div style="display:flex;gap:8px;margin-top:10px;align-items:center;">
+                            <button type="submit" id="modalPlaceOrderBtn" class="checkout-link"
+                                style="background:#2d8f7c;border-radius:6px;">Place Order</button>
+                            <button type="button" id="modalBuyNowBtn" class="checkout-link"
+                                style="background:#4aa3ff;border-radius:6px;">Buy Now</button>
+                            <div id="modalPaymentHint" class="small-muted" aria-live="polite" style="margin-left:8px;">
+                            </div>
+                        </div>
+
+                        <div id="modalOrderMsg" style="margin-top:12px;"></div>
+                    </form>
+                </div>
+
+                <!-- Right: Cart summary + promo placed BEFORE totals -->
+                <aside class="cart-summary" aria-label="Cart summary">
+                    <h4 style="margin-top:0;margin-bottom:8px;">Order Summary</h4>
+                    <div id="modalCartSummary" aria-live="polite"></div>
+
+                    <!-- PayPal button for modal checkout -->
+                    <div id="modal_paypal_button_container" style="margin-top:10px;"></div>
+
+                    <div style="margin-top:10px;">
+                        <label for="modal_promo_code" style="font-weight:700;margin-bottom:6px;display:block;">Promo
+                            Code</label>
+                        <select id="modal_promo_code" name="promo_code"
+                            style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd;">
+                            <option value="">-- None --</option>
+                        </select>
+                        <div id="modalPromoMsg" class="small-muted" style="margin-top:8px;"></div>
+                    </div>
+
+                    <div style="margin-top:12px;">
+                        <div class="small-muted">Payment on delivery available for eligible addresses.</div>
+                    </div>
+                </aside>
+            </div>
+        </div>
+    </div>
+
+    <!-- PayPal SDK (uses configured client id and currency) -->
+    <script
+        src="https://www.paypal.com/sdk/js?client-id={{ PAYPAL_CLIENT_ID }}&currency={{ PAYPAL_CURRENCY }}"></script>
+    <script src="{{ url_for('static', filename='js/paypal.js') }}"></script>
+
+    <script>
+        const API = "/api";
+
+        function toStaticUrl(url) {
+            const placeholder = "{{ url_for('static', filename='images/placeholder.jpg') }}";
+            if (!url) return placeholder;
+            if (typeof url !== 'string') return placeholder;
+            if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/')) return url;
+            return `/static/${url}`;
+        }
+
+        // Formatters (kept minimal here; main.js now does heavier lifting when loaded)
+        function formatCurrencyLocal(value, currency) {
+            const n = Number(value) || 0;
+            try {
+                if (currency === 'GBP') return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 0 }).format(n);
+                if (currency === 'USD') return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
+            } catch (e) { /* fall through */ }
+            return currency === 'GBP' ? `£${Math.round(n)}` : `$${Math.round(n)}`;
+        }
+
+        function formatPriceInteger(value) {
+            // Keep compatibility for templates that expect this name; primary display is GBP
+            return formatCurrencyLocal(value, 'GBP');
+        }
+
+        let cart = JSON.parse(localStorage.getItem('cart') || "[]");
+        const cartSection = document.getElementById('cartSection');
+        const discountInfoDiv = document.getElementById('discountPercentInfo');
+        const modalDiscountInfo = document.getElementById('modalDiscountInfo');
+        let checkoutDiscountPercent = 0;
+        let availablePromos = [];
+        let selectedPromoPercent = 0;
+        let selectedPromoCode = '';
+
+        // FX support: mirror logic from main.js if main.js isn't loaded yet
+        let fxRateGBPtoUSD = null;
+        const FX_CACHE_KEY = 'fx_gbp_usd';
+        const FX_TTL_MS = 60 * 60 * 1000;
+        async function fetchFX() {
+            try {
+                const raw = localStorage.getItem(FX_CACHE_KEY);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    if (parsed && parsed.rate && parsed.ts && (Date.now() - parsed.ts < FX_TTL_MS)) {
+                        fxRateGBPtoUSD = parsed.rate;
+                        return fxRateGBPtoUSD;
+                    }
+                }
+                const res = await fetch('https://api.exchangerate.host/latest?base=GBP&symbols=USD');
+                if (!res.ok) throw new Error('Failed FX fetch');
+                const js = await res.json();
+                const rate = Number(js?.rates?.USD || 0);
+                if (rate && rate > 0) {
+                    fxRateGBPtoUSD = rate;
+                    localStorage.setItem(FX_CACHE_KEY, JSON.stringify({ rate, ts: Date.now() }));
+                    return rate;
+                }
+            } catch (e) {
+                console.warn('fetchFX failed', e);
+                try {
+                    const raw = localStorage.getItem(FX_CACHE_KEY);
+                    if (raw) {
+                        const parsed = JSON.parse(raw);
+                        if (parsed && parsed.rate) fxRateGBPtoUSD = parsed.rate;
+                    }
+                } catch (e) { /* ignore */ }
+                if (!fxRateGBPtoUSD) fxRateGBPtoUSD = 1.25;
+                return fxRateGBPtoUSD;
+            }
+        }
+
+        function formatCurrency(value, currency) {
+            const n = Number(value) || 0;
+            if (currency === 'GBP') {
+                try {
+                    return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 0 }).format(n);
+                } catch (e) { return `£${Math.round(n)}`; }
+            }
+            const rate = fxRateGBPtoUSD || 1.25;
+            const converted = n * rate;
+            try {
+                return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(converted);
+            } catch (e) { return `$${Math.round(converted)}`; }
+        }
+
+        function getCart() { return JSON.parse(localStorage.getItem('cart') || '[]'); }
+        function saveCart(cart) { localStorage.setItem('cart', JSON.stringify(cart)); }
+
+        async function fetchDiscountPercent() {
+            try {
+                const r = await fetch(`${API}/settings/checkout_discount`);
+                if (!r.ok) {
+                    checkoutDiscountPercent = 0;
+                    discountInfoDiv.style.display = "none";
+                    modalDiscountInfo.style.display = "none";
+                    return;
+                }
+                const js = await r.json();
+                checkoutDiscountPercent = parseFloat(js.percent) || 0;
+                if (checkoutDiscountPercent > 0) {
+                    discountInfoDiv.style.display = "block";
+                    discountInfoDiv.innerHTML = `<span>🌟 <b>Special Offer:</b> <span style="color:#27ae60">${checkoutDiscountPercent}% OFF</span> applied automatically at checkout!</span>`;
+                    modalDiscountInfo.style.display = "block";
+                    modalDiscountInfo.innerHTML = `<span>🌟 <b>Special Offer:</b> <span style="color:#27ae60">${checkoutDiscountPercent}% OFF</span> applied automatically.</span>`;
+                } else {
+                    discountInfoDiv.style.display = "none";
+                    modalDiscountInfo.style.display = "none";
+                }
+            } catch (e) {
+                console.warn("Failed to load discount percent", e);
+                checkoutDiscountPercent = 0;
+                discountInfoDiv.style.display = "none";
+                modalDiscountInfo.style.display = "none";
+            }
+        }
+
+        async function loadActivePromosInto(selectElId = 'modal_promo_code') {
+            try {
+                const res = await fetch(`${API}/coupons`);
+                if (!res.ok) {
+                    availablePromos = [];
+                } else {
+                    availablePromos = await res.json();
+                }
+            } catch (e) {
+                console.warn("Failed to load promos", e);
+                availablePromos = [];
+            }
+
+            const promoSelect = document.getElementById(selectElId);
+            if (!promoSelect) return;
+            let options = '<option value="">-- None --</option>';
+            availablePromos.forEach(p => {
+                let percent = 0;
+                if (p.discount_type === 'percent') {
+                    percent = parseFloat(p.discount_value || 0) || 0;
+                }
+                options += `<option value="${p.code}" data-percent="${percent}">${p.code} ${p.description ? '(' + p.description + ')' : ''}</option>`;
+            });
+            promoSelect.innerHTML = options;
+
+            promoSelect.addEventListener('change', function () {
+                const code = this.value || '';
+                selectedPromoCode = code;
+                const found = availablePromos.find(x => x.code === code);
+                if (found) {
+                    selectedPromoPercent = found.discount_type === 'percent' ? (parseFloat(found.discount_value) || 0) : 0;
+                } else {
+                    selectedPromoPercent = 0;
+                }
+                document.getElementById('modalPromoMsg').innerText = selectedPromoPercent > 0 ? `Promo will apply ${selectedPromoPercent}% off.` : '';
+                renderModalCartSummary();
+            });
+        }
+
+        function setButtonState(btn, enabled, reason) {
+            if (!btn) return;
+            btn.disabled = !enabled;
+            if (enabled) {
+                btn.classList.remove('btn-disabled');
+                btn.classList.add('btn-active');
+                btn.setAttribute('aria-disabled', 'false');
+                btn.tabIndex = 0;
+                btn.removeAttribute('title');
+            } else {
+                btn.classList.remove('btn-active');
+                btn.classList.add('btn-disabled');
+                btn.setAttribute('aria-disabled', 'true');
+                btn.tabIndex = -1;
+                if (reason) btn.setAttribute('title', reason);
+            }
+        }
+
+        function updateModalPaymentButtonsState() {
+            const cartLocal = JSON.parse(localStorage.getItem('cart') || "[]");
+            const cartEmpty = !cartLocal || !cartLocal.length;
+            const paymentEl = document.getElementById('modal_paymentSelect');
+            if (!paymentEl) return;
+            const payment = paymentEl.value || 'Cash on Delivery';
+            const place = document.getElementById('modalPlaceOrderBtn');
+            const buy = document.getElementById('modalBuyNowBtn');
+            const hint = document.getElementById('modalPaymentHint');
+
+            if (cartEmpty) {
+                setButtonState(place, false, 'Cart is empty');
+                setButtonState(buy, false, 'Cart is empty');
+                if (hint) hint.innerText = 'Your cart is empty.';
+                return;
+            }
+
+            if (payment === 'Cash on Delivery') {
+                setButtonState(place, true);
+                setButtonState(buy, false, 'Buy Now requires card payment (Visa/Mastercard).');
+                if (hint) hint.innerText = 'Cash on Delivery selected — use "Place Order".';
+            } else {
+                setButtonState(place, false, 'Place Order is disabled for card payments.');
+                setButtonState(buy, true);
+                if (hint) hint.innerText = `${payment} selected — use "Buy Now" to pay with card.`;
+            }
+        }
+
+        function renderCart() {
+            cart = JSON.parse(localStorage.getItem('cart') || "[]");
+            if (!cart || !cart.length) {
+                cartSection.innerHTML = '<div class="cart-empty">Your cart is empty.</div>';
+                document.getElementById('checkoutBtnLink').style.display = "none";
+                discountInfoDiv.style.display = 'none';
+                return;
+            }
+
+            let rows = '';
+            for (let i = 0; i < cart.length; i++) {
+                const item = cart[i];
+                const price = parseFloat(item.price || 0);
+                const qty = parseInt(item.quantity || item.qty || 0, 10);
+                const totalPrice = price * qty;
+                rows += `
+                    <tr>
+                        <td>
+                            <div style="display:flex;gap:8px;align-items:center;">
+                                <img src="${toStaticUrl(item.image || item.image_url || '')}" alt="${(item.title || item.name) || ''}" style="width:64px;height:64px;object-fit:contain;border-radius:6px;background:#fff;border:1px solid #eee;">
+                                <div>
+                                    <div style="font-weight:600;">${item.title || item.name || ''}</div>
+                                    <div class="small-muted">${item.brand || ''}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td style="text-align:center;">
+                            <div style="display:flex;align-items:center;justify-content:center;gap:6px;">
+                                <button class="qty-control-btn" onclick="updateQuantity(${i}, -1)" aria-label="Decrease quantity">-</button>
+                                <span>${qty}</span>
+                                <button class="qty-control-btn" onclick="updateQuantity(${i}, 1)" aria-label="Increase quantity">+</button>
+                            </div>
+                        </td>
+                        <td>${formatCurrency(totalPrice, 'GBP')} <div class="small-muted" style="display:inline-block;margin-left:6px;">≈ ${formatCurrency(totalPrice, 'USD')}</div></td>
+                        <td><button class="remove-btn" onclick="removeCartItem(${i})" aria-label="Remove item">✕</button></td>
+                    </tr>
+                `;
+            }
+
+            const subtotal = cart.reduce((sum, i) => sum + (parseFloat(i.price || 0) * (i.quantity || i.qty || 0)), 0);
+
+            // apply only the automatic global discount (checkoutDiscountPercent) on the main cart view.
+            // Promo codes are applied in the modal (explicit selection).
+            const globalPercent = checkoutDiscountPercent || 0;
+            const discountAmount = subtotal * (globalPercent / 100);
+            const totalAfterGlobal = subtotal - discountAmount;
+
+            const table = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:60%;">Product</th>
+                            <th style="width:20%;">Qty</th>
+                            <th style="width:20%;">Price</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows}
+                    </tbody>
+                    <tfoot>
+                        <tr class="total-row">
+                            <td colspan="2" style="font-weight:600;">Subtotal</td>
+                            <td style="font-weight:bold;">${formatCurrency(subtotal, 'GBP')} (${formatCurrency(subtotal, 'USD')})</td>
+                        </tr>
+                        ${globalPercent > 0 ? `<tr class="total-row">
+                            <td colspan="2" style="font-weight:600;color:#b8860b;">Auto Discount (${globalPercent}%)</td>
+                            <td style="text-align:right;color:#b8860b;">-${formatCurrency(discountAmount, 'GBP')} (${formatCurrency(discountAmount, 'USD')})</td>
+                        </tr>` : ''}
+                        <tr class="total-row">
+                            <td colspan="2" style="font-weight:700;">Total</td>
+                            <td style="text-align:right;color:#27ae60;font-weight:700;">${formatCurrency(totalAfterGlobal, 'GBP')} (${formatCurrency(totalAfterGlobal, 'USD')})</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            `;
+
+            cartSection.innerHTML = table;
+            document.getElementById('checkoutBtnLink').style.display = "inline-block";
+        }
+
+        function renderModalCartSummary() {
+            const modalCartSummary = document.getElementById('modalCartSummary');
+            const cartLocal = JSON.parse(localStorage.getItem('cart') || "[]");
+            if (!cartLocal || !cartLocal.length) {
+                modalCartSummary.innerHTML = '<div class="small-muted">Your cart is empty.</div>';
+                document.getElementById('modalPlaceOrderBtn').disabled = true;
+                document.getElementById('modalBuyNowBtn').disabled = true;
+                return;
+            }
+            document.getElementById('modalPlaceOrderBtn').disabled = false;
+            document.getElementById('modalBuyNowBtn').disabled = false;
+
+            let html = `<table>
+                <thead><tr><th>Product</th><th style="text-align:center;">Qty</th><th style="text-align:right;">Total</th></tr></thead>
+                <tbody>`;
+            let subtotal = 0;
+            cartLocal.forEach(item => {
+                const qty = item.quantity || item.qty || 1;
+                const price = parseFloat(item.price || 0);
+                const itemTotal = price * qty;
+                subtotal += itemTotal;
+                html += `<tr>
+                    <td style="padding:8px 6px;">
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <img src="${toStaticUrl(item.image || item.image_url || '')}" alt="${item.title || ''}" style="width:56px;height:56px;object-fit:contain;border-radius:6px;background:#fff;border:1px solid #eee;">
+                            <div>
+                                <div style="font-weight:600">${item.title || item.name || ''}</div>
+                                <div class="small-muted" style="font-size:13px">${item.brand || ''}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="text-align:center;">${qty}</td>
+                    <td style="text-align:right;">${formatCurrency(itemTotal, 'GBP')} <span class="small-muted" style="margin-left:8px;">≈ ${formatCurrency(itemTotal, 'USD')}</span></td>
+                </tr>`;
+            });
+            // combined percent = global checkout discount + selected promo percent (if promo is percent-based)
+            let combinedPercent = (checkoutDiscountPercent || 0) + (selectedPromoPercent || 0);
+            if (combinedPercent > 95) combinedPercent = 95;
+            const discountedTotal = subtotal * (1 - combinedPercent / 100);
+            const discountAmount = subtotal - discountedTotal;
+
+            html += `</tbody>
+                <tfoot>
+                    <tr class="total-row"><td></td><td style="font-weight:700;">Subtotal</td><td style="text-align:right;font-weight:700;">${formatCurrency(subtotal, 'GBP')} (${formatCurrency(subtotal, 'USD')})</td></tr>
+                    <tr class="total-row"><td></td><td style="font-weight:700;">Discounts</td><td style="text-align:right;color:#b8860b;">-${combinedPercent}% (${formatCurrency(discountAmount, 'GBP')} / ${formatCurrency(discountAmount, 'USD')})</td></tr>
+                    <tr class="total-row"><td></td><td style="font-weight:700;">Total</td><td style="text-align:right;color:#27ae60;font-weight:700;">${formatCurrency(discountedTotal, 'GBP')} (${formatCurrency(discountedTotal, 'USD')})</td></tr>
+                </tfoot>
+            </table>`;
+
+            modalCartSummary.innerHTML = html;
+
+            // apply modal payment button logic after rendering summary
+            updateModalPaymentButtonsState();
+        }
+
+        function removeCartItem(idx) {
+            let current = JSON.parse(localStorage.getItem('cart') || "[]");
+            if (!current || idx < 0 || idx >= current.length) return;
+            current.splice(idx, 1);
+            localStorage.setItem('cart', JSON.stringify(current));
+            renderCart();
+            renderModalCartSummary();
+        }
+
+        function updateQuantity(idx, change) {
+            let current = JSON.parse(localStorage.getItem('cart') || "[]");
+            if (!current || idx < 0 || idx >= current.length) return;
+            const curQty = parseInt(current[idx].quantity || current[idx].qty || 0, 10);
+            const newQty = curQty + change;
+            if (newQty > 0) {
+                current[idx].quantity = newQty;
+            } else {
+                current.splice(idx, 1);
+            }
+            localStorage.setItem('cart', JSON.stringify(current));
+            renderCart();
+            renderModalCartSummary();
+        }
+
+        function openCheckoutModal(e) {
+            if (e) e.preventDefault();
+            fetchDiscountPercent().then(() => {
+                loadActivePromosInto().then(() => {
+                    renderModalCartSummary();
+                    // show the modal
+                    document.getElementById('checkoutBackdrop').style.display = 'flex';
+                    document.getElementById('checkoutBackdrop').setAttribute('aria-hidden', 'false');
+
+                    // Render PayPal buttons now that the container is visible.
+                    try {
+                        if (window.paypal && document.querySelector('#modal_paypal_button_container')) {
+                            const container = document.querySelector('#modal_paypal_button_container');
+                            if (!container.innerHTML.trim()) {
+                                renderPayPalButtons('#modal_paypal_button_container', { currency: '{{ PAYPAL_CURRENCY }}', successUrl: '/' });
+                            }
+                        }
+                    } catch (err) {
+                        console.warn('PayPal render attempt failed', err);
+                    }
+
+                    setTimeout(() => document.getElementById('modal_customer').focus(), 50);
+                });
+            });
+        }
+
+        function closeCheckoutModal() {
+            document.getElementById('checkoutBackdrop').style.display = 'none';
+            document.getElementById('checkoutBackdrop').setAttribute('aria-hidden', 'true');
+        }
+
+        async function logOrderAttempt(item, status = "Carted") {
+            try {
+                await fetch(`${API}/order-attempts`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        email: "",
+                        product: item.title || item.name || "",
+                        qty: item.quantity || item.qty || 1,
+                        status
+                    })
+                });
+            } catch (e) {
+                // Ignore logging failures
+            }
+        }
+
+        async function submitOrdersFromModal(customer, email, phone, address, payment_method, promo_code, date) {
+            const cartLocal = JSON.parse(localStorage.getItem('cart') || "[]");
+            if (!cartLocal || !cartLocal.length) return { success: false, message: 'Cart empty' };
+            const results = [];
+            for (const item of cartLocal) {
+                const payload = {
+                    customer_name: customer,
+                    customer_email: email,
+                    customer_phone: phone,
+                    customer_address: address,
+                    product_id: item.id || item.product_id || '',
+                    product_title: item.title || item.name || '',
+                    quantity: item.quantity || item.qty || 1,
+                    status: "Pending",
+                    payment_method: payment_method || "Cash on Delivery",
+                    date: date || (new Date().toISOString().slice(0, 19).replace('T', ' '))
+                };
+                if (promo_code) payload.promo_code = promo_code;
+
+                try {
+                    const res = await fetch(`${API}/orders`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!res.ok) {
+                        const text = await res.text().catch(() => res.statusText);
+                        results.push({ ok: false, message: text || `HTTP ${res.status}` });
+                    } else {
+                        results.push({ ok: true });
+                    }
+                } catch (e) {
+                    results.push({ ok: false, message: e.message });
+                }
+            }
+            return results;
+        }
+
+        async function logOrderAttemptsForCart(status = 'CheckedOut') {
+            const cartLocal = JSON.parse(localStorage.getItem('cart') || "[]") || [];
+            for (const item of cartLocal) {
+                try {
+                    await fetch(`${API}/order-attempts`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            email: "",
+                            product: item.title || item.name || "",
+                            qty: item.quantity || item.qty || 1,
+                            status
+                        })
+                    });
+                } catch (e) {
+                    // ignore
+                }
+            }
+        }
+
+        document.getElementById('modalOrderForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const customer = document.getElementById('modal_customer').value || '';
+            const email = document.getElementById('modal_email').value || '';
+            const phone = document.getElementById('modal_phone').value || '';
+            const address = document.getElementById('modal_address').value || '';
+            const payment_method = document.getElementById('modal_paymentSelect').value || 'Cash on Delivery';
+            const promo_code = selectedPromoCode || null;
+            const dateVal = document.getElementById('modal_date').value || new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+            const orderMsg = document.getElementById('modalOrderMsg');
+            orderMsg.innerHTML = '<span class="small-muted">Placing your order...</span>';
+            setButtonState(document.getElementById('modalPlaceOrderBtn'), false);
+            setButtonState(document.getElementById('modalBuyNowBtn'), false);
+
+            await logOrderAttemptsForCart('CheckedOut');
+            const results = await submitOrdersFromModal(customer, email, phone, address, payment_method, promo_code, dateVal);
+
+            const anyFailed = results.some(r => !r.ok);
+            if (anyFailed) {
+                orderMsg.innerHTML = '<div style="color:#e74c3c;font-weight:700;">One or more orders failed. See details below.</div>';
+                results.forEach((r, i) => {
+                    if (!r.ok) {
+                        orderMsg.innerHTML += `<div style="color:#c44;">Item ${i + 1}: ${r.message || 'Failed'}</div>`;
+                    }
+                });
+                updateModalPaymentButtonsState();
+            } else {
+                orderMsg.innerHTML = `<div style="color:#27ae60;font-weight:700;">Thank you! Your orders were placed successfully.</div>`;
+                localStorage.removeItem('cart');
+                renderCart();
+                renderModalCartSummary();
+                setTimeout(() => {
+                    closeCheckoutModal();
+                    window.location.href = "{{ url_for('main.index') }}";
+                }, 1600);
+            }
+        });
+
+        async function handleModalBuyNow() {
+            const customer = document.getElementById('modal_customer').value || '';
+            const email = document.getElementById('modal_email').value || '';
+            const phone = document.getElementById('modal_phone').value || '';
+            const address = document.getElementById('modal_address').value || '';
+            const promo_code = selectedPromoCode || null;
+            const dateVal = document.getElementById('modal_date').value || new Date().toISOString().slice(0, 19).replace('T', ' ');
+            const payment_method = 'Visa/Mastercard';
+
+            const orderMsg = document.getElementById('modalOrderMsg');
+            orderMsg.innerHTML = '<span class="small-muted">Processing payment and placing your order...</span>';
+            setButtonState(document.getElementById('modalPlaceOrderBtn'), false);
+            setButtonState(document.getElementById('modalBuyNowBtn'), false);
+
+            await logOrderAttemptsForCart('CheckedOut');
+
+            const customerObj = { name: customer, email: email, phone: phone, address: address };
+            try { localStorage.setItem('paypal_customer', JSON.stringify(customerObj)); } catch (e) { /* ignore */ }
+
+            const cartLocal = JSON.parse(localStorage.getItem('cart') || "[]");
+            const items = cartLocal.map(i => ({
+                id: i.id || i.product_id || '',
+                title: i.title || i.name || '',
+                unit_price: parseFloat(i.price || 0),
+                quantity: parseInt(i.quantity || i.qty || 1, 10),
+                currency: 'USD'
+            }));
+            try { localStorage.setItem('paypal_items', JSON.stringify(items)); } catch (e) { /* ignore */ }
+
+            if (typeof window.initiateCardCheckout === 'function') {
+                try {
+                    await window.initiateCardCheckout(items, { currency: 'USD', returnUrl: window.location.origin + '/paypal/return' });
+                } catch (err) {
+                    console.error('initiateCardCheckout error', err);
+                    const detail = (err && err.message) ? err.message : String(err);
+                    if (detail.toLowerCase().includes('401') || detail.toLowerCase().includes('unauthorized')) {
+                        orderMsg.innerHTML = `<div style="color:#e74c3c;font-weight:700;">Payment provider credentials appear missing or invalid on the server.</div>
+                        <div style="color:#666;margin-top:8px;">Please ensure PAYPAL_CLIENT_ID and PAYPAL_SECRET are set as environment variables on the server (use sandbox values for development), and restart the application.</div>
+                        <div style="color:#666;margin-top:8px;font-size:0.9em;">Server error details: ${detail}</div>`;
+                    } else {
+                        orderMsg.innerHTML = `<div style="color:#e74c3c;font-weight:700;">Failed to start card (PayPal) checkout.</div><div style="color:#666;margin-top:8px;font-size:0.9em;">${detail}</div>`;
+                    }
+                    updateModalPaymentButtonsState();
+                }
+            } else {
+                orderMsg.innerHTML = '<div style="color:#e74c3c;font-weight:700;">Card checkout not available in this browser.</div>';
+                updateModalPaymentButtonsState();
+            }
+        }
+
+        document.getElementById('modalBuyNowBtn').addEventListener('click', function () {
+            handleModalBuyNow();
+        });
+
+        const modalPaymentSelectEl = document.getElementById('modal_paymentSelect');
+        if (modalPaymentSelectEl) {
+            modalPaymentSelectEl.addEventListener('change', updateModalPaymentButtonsState);
+        }
+
+        (async function () {
+            await fetchDiscountPercent();
+            await fetchFX();
+
+            const current = JSON.parse(localStorage.getItem('cart') || "[]");
+            for (const item of current) {
+                logOrderAttempt(item, "Carted");
+            }
+
+            renderCart();
+        })();
+
+        setInterval(async () => {
+            await fetchDiscountPercent();
+            await loadActivePromosInto();
+            renderModalCartSummary();
+        }, 30000);
+    </script>
+</body>
+
+</html>

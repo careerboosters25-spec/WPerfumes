@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>History — WPerfumes</title>
+
+    <!-- Use the same stylesheets as index.html -->
+    <link rel="stylesheet" href="/static/css/main.css">
+    <link rel="stylesheet" href="/static/css/announcements.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-o9N1j8bM0g6IVT+gq4kZpM3b6rY2v6b7qf+3yg7P6u0=" crossorigin="" />
+    <link rel="stylesheet" href="/static/css/hero-audio.css">
+    <link rel="stylesheet" href="/static/css/footer.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <!-- Page-specific styles: design-focused UX/UI for perfumers stories -->
+    <style>
+        /* Page hero */
+        .history-hero {
+            background: linear-gradient(180deg, #fbfcfd 0%, #f7f9fb 50%);
+            padding: 48px 24px;
+            border-radius: 12px;
+            margin: 18px 0;
+            box-shadow: 0 6px 18px rgba(30, 40, 60, 0.06);
+            display: flex;
+            gap: 24px;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+
+        .history-hero .title {
+            max-width: 720px;
+        }
+
+        .history-hero h1 {
+            margin: 0 0 8px 0;
+            font-size: 2.2rem;
+            color: #0b5351;
+            letter-spacing: -0.5px;
+        }
+
+        .history-hero p {
+            margin: 0;
+            color: #3e4a4a;
+        }
+
+        .history-hero .hero-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .btn {
+            display: inline-flex;
+            gap: 10px;
+            align-items: center;
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: #0b5351;
+            border: 1px solid rgba(11, 83, 81, 0.08);
+        }
+
+        .btn-primary {
+            background: linear-gradient(90deg, #0b9a97, #0b6e6b);
+            color: #fff;
+            box-shadow: 0 6px 18px rgba(11, 150, 151, 0.14);
+        }
+
+        /* quick-controls */
+        .history-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin: 16px 0 24px 0;
+            flex-wrap: wrap;
+        }
+
+        .search-perfumer {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex: 1 1 420px;
+        }
+
+        .search-perfumer input {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 1px solid #e5eef0;
+            background: #fff;
+            outline: none;
+            font-size: 0.95rem;
+        }
+
+        .alpha-index {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .alpha-index button {
+            background: transparent;
+            border: none;
+            color: #0b5351;
+            padding: 6px 8px;
+            cursor: pointer;
+            font-weight: 600;
+            border-radius: 6px;
+        }
+
+        .alpha-index button.active,
+        .alpha-index button:hover {
+            background: #e8f6f6;
+            box-shadow: inset 0 -2px 0 rgba(11, 83, 81, 0.06);
+        }
+
+        /* Top perfumers grid */
+        .top-perfumers {
+            margin: 18px 0;
+        }
+
+        .top-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            padding: 8px 12px;
+            border-radius: 10px;
+            background: #fff;
+            border: 1px solid #eef6f6;
+            cursor: pointer;
+            color: #0b5351;
+            font-weight: 700;
+        }
+
+        .tab.active {
+            background: linear-gradient(90deg, #0b9a97, #0b6e6b);
+            color: #fff;
+            box-shadow: 0 8px 20px rgba(11, 150, 151, 0.12);
+        }
+
+        .perfumers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 12px;
+        }
+
+        .perfumer-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            box-shadow: 0 6px 18px rgba(30, 40, 60, 0.04);
+            transition: transform .18s ease, box-shadow .18s ease;
+            cursor: pointer;
+        }
+
+        .perfumer-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 36px rgba(30, 40, 60, 0.08);
+        }
+
+        .perfumer-avatar {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            overflow: hidden;
+            flex: 0 0 64px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(180deg, #fff, #f1f6f6);
+            border: 1px solid #eef6f6;
+        }
+
+        .perfumer-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .perfumer-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .perfumer-info h3 {
+            margin: 0;
+            font-size: 1rem;
+            color: #053d3b;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .perfumer-info p {
+            margin: 6px 0 0 0;
+            color: #4c6565;
+            font-size: 0.9rem;
+        }
+
+        /* Expanded detail area */
+        .perfumer-detail {
+            margin-top: 8px;
+            background: linear-gradient(180deg, #ffffff, #fbffff);
+            border: 1px solid #eef8f8;
+            border-radius: 10px;
+            padding: 14px;
+            display: none;
+            animation: fadeIn .22s ease;
+        }
+
+        .perfumer-detail.open {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-6px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* A-Z list columns */
+        .az-section {
+            margin: 28px 0;
+        }
+
+        .az-letter {
+            font-size: 1.1rem;
+            color: #0b5351;
+            margin: 12px 0;
+            font-weight: 700;
+        }
+
+        .az-list {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px 20px;
+        }
+
+        .az-item {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            padding: 8px 6px;
+            border-radius: 8px;
+            transition: background .12s ease;
+            cursor: pointer;
+            color: #0b5351;
+        }
+
+        .az-item:hover {
+            background: #f1fbfb;
+        }
+
+        .az-item .small-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            overflow: hidden;
+            flex: 0 0 32px;
+            border: 1px solid #eef6f6;
+        }
+
+        .az-item .small-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Stories feed */
+        .stories-feed {
+            margin: 32px 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
+        }
+
+        .story-card {
+            border-radius: 12px;
+            padding: 16px;
+            background: linear-gradient(180deg, #ffffff, #fbffff);
+            box-shadow: 0 10px 30px rgba(11, 83, 81, 0.04);
+            border: 1px solid #eef8f8;
+        }
+
+        .story-card h4 {
+            margin: 0 0 8px 0;
+            color: #0b5351;
+        }
+
+        .story-card p {
+            margin: 0;
+            color: #475a5a;
+        }
+
+        /* small misc */
+        .muted {
+            color: #6d8b8b;
+            font-size: 0.92rem;
+        }
+
+        .center {
+            text-align: center;
+        }
+
+        @media (max-width:880px) {
+            .az-list {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .history-hero {
+                padding: 20px;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Announcement (copied structure from index.html so announcements.js / styles behave the same) -->
+    <div class="announcement-container container" aria-live="polite">
+        <header class="announcement-bar" role="region" aria-label="Site announcements">
+            <div class="announcement-text-container" aria-hidden="false">
+                <ul class="announcement-list" aria-live="off" aria-hidden="false">
+                    <li>Shop Now Pay Later</li>
+                    <li>Free Delivery Above $50</li>
+                    <li>10% Discount if Cash on Delivery</li>
+                    <li>Trusted Products</li>
+                    <li>Shop With Us Now</li>
+                </ul>
+            </div>
+            <div class="city-selector" aria-hidden="false">
+                <a class="shop-locator" href="/">Store Locator</a>
+            </div>
+        </header>
+    </div>
+
+    <div id="blinking-offer" class="blinking-offer" style="display:none;"></div>
+
+    <!-- Navigation (same markup and classes so shared JS/CSS apply) -->
+    <nav class="navbar" role="navigation" aria-label="Main navigation">
+        <div style="display:flex;align-items:center;gap:12px;">
+            <a class="brand-logo" href="/">WPerfumes</a>
+            <ul class="nav-tabs" role="menubar" aria-label="Site Menu">
+                <li><a href="/">Home</a></li>
+                <li><a href="/brands">Fragrances</a></li>
+                <li><a href="/price-comparison">Compare Prices</a></li>
+                <li><a href="/static/pages/history.html">History</a></li>
+                <li><a href="/static/pages/about.html">About Us</a></li>
+            </ul>
+        </div>
+
+        <div class="navbar-center">
+            <div class="search-container">
+                <input id="siteSearchInput" type="text" placeholder="Search for scents, notes, or brands..."
+                    aria-label="Search">
+            </div>
+        </div>
+
+        <div class="navbar-right">
+            <a id="cartBtn" class="cart-btn" href="/cart" aria-label="Open cart">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3e2723" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="9" cy="21" r="1"></circle>
+                    <circle cx="20" cy="21" r="1"></circle>
+                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61l1.38-8.19H6"></path>
+                </svg>
+                <span>Cart</span>
+                <span id="cartCountBadge" class="cart-count-badge" style="display:none;">0</span>
+            </a>
+
+            <div class="login-menu-container">
+                <a href="/login" class="login-btn">Login</a>
+                <div class="login-submenu">
+                    <a href="/signup" class="signup-btn">Sign Up</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Page content -->
+    <main id="page-content" class="container" role="main" aria-live="polite" style="padding:24px;">
+        <section class="history-hero">
+            <div class="title">
+                <h1>Perfumers & History</h1>
+                <p>Explore the stories behind the noses, the houses they created, and the scents that shaped the world.
+                    Read short, engaging stories and expand any perfumer to learn more.</p>
+                <div class="muted" style="margin-top:8px;">Tip: Use the A–Z index or the search to quickly find
+                    perfumers.</div>
+            </div>
+
+            <div class="hero-actions">
+                <button id="toggleStoriesBtn" class="btn btn-ghost" title="Toggle Stories View">
+                    <i class="fa-solid fa-book-open"></i> Stories
+                </button>
+                <a href="#top-perfumers" class="btn btn-primary"><i class="fa-solid fa-star"></i> Top Perfumers</a>
+            </div>
+        </section>
+
+        <!-- controls: search + A-Z -->
+        <div class="history-controls">
+            <div class="search-perfumer" role="search" aria-label="Search perfumers">
+                <input id="perfumerSearch" placeholder="Search perfumers by name, company or tag..."
+                    aria-label="Search perfumers">
+                <button id="clearSearch" class="btn btn-ghost" title="Clear search"><i
+                        class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <div class="alpha-index" aria-label="Alphabetical index">
+                <!-- letters will be injected by JS -->
+                <div id="alphaButtons" class="alpha-buttons"></div>
+            </div>
+        </div>
+
+        <!-- Top 50 perfumers in 5 pages/tabs (10 per tab) -->
+        <section id="top-perfumers" class="top-perfumers" aria-labelledby="topPerfumersHeading">
+            <div class="top-title">
+                <h2 id="topPerfumersHeading">Popular Perfumers & Entrepreneurs</h2>
+                <div class="tabs" role="tablist" aria-label="Top perfumers pages">
+                    <button class="tab active" data-page="1" role="tab" aria-selected="true">Top 1–10</button>
+                    <button class="tab" data-page="2" role="tab" aria-selected="false">Top 11–20</button>
+                    <button class="tab" data-page="3" role="tab" aria-selected="false">Top 21–30</button>
+                    <button class="tab" data-page="4" role="tab" aria-selected="false">Top 31–40</button>
+                    <button class="tab" data-page="5" role="tab" aria-selected="false">Top 41–50</button>
+                </div>
+            </div>
+
+            <div id="topGrid" class="perfumers-grid" aria-live="polite">
+                <!-- perfumer cards injected by JS -->
+            </div>
+        </section>
+
+        <!-- A-Z listing -->
+        <section id="az-listing" class="az-section" aria-labelledby="azHeading">
+            <h2 id="azHeading">Perfumers A — Z</h2>
+            <div id="azContainer" class="az-list" role="list">
+                <!-- letter groups injected by JS when selected -->
+            </div>
+        </section>
+
+        <!-- Stories feed -->
+        <section id="stories" class="stories-feed" aria-label="Perfumers stories">
+            <!-- story cards injected by JS -->
+        </section>
+    </main>
+
+    <!-- Footer (same structure/classes so footer.js/styles apply) -->
+    <footer class="main-footer">
+        <div class="footer-card footer-card-1">
+            <div>
+                <h3>Connect with Us</h3>
+                <div class="social-icons-row">
+                    <a href="https://www.facebook.com/wperfumes" class="social-icon"
+                        aria-label="Follow us on Facebook"><i class="fab fa-facebook-f"></i></a>
+                    <a href="https://www.instagram.com/wperfumes" class="social-icon"
+                        aria-label="Follow us on Instagram"><i class="fab fa-instagram"></i></a>
+                    <a href="https://www.tiktok.com/@wperfumes" class="social-icon" aria-label="Follow us on TikTok"><i
+                            class="fab fa-tiktok"></i></a>
+                    <a href="https://www.twitter.com/wperfumes" class="social-icon" aria-label="Follow us on Twitter"><i
+                            class="fab fa-x-twitter"></i></a>
+                </div>
+                <h3>Secure Payments</h3>
+                <div class="payment-icons-row">
+                    <span class="payment-icon" aria-label="Visa Payment"><i class="fab fa-cc-visa"></i></span>
+                    <span class="payment-icon" aria-label="PayPal Payment"><i class="fab fa-cc-paypal"></i></span>
+                    <span class="payment-icon" aria-label="Apple Pay"><i class="fab fa-cc-apple-pay"></i></span>
+                    <span class="payment-icon" aria-label="MasterCard Payment"><i
+                            class="fab fa-cc-mastercard"></i></span>
+                </div>
+            </div>
+            <p class="registration-number" id="copyright">&copy; WPerfumes, Inc. All Rights Reserved.<br>Company Reg.
+                No: 12345678A</p>
+        </div>
+
+        <div class="footer-card footer-card-2">
+            <h2 class="footer-logo">WPerfumes</h2>
+            <div class="footer-link-column" id="footer-column-1">
+                <h4>Company</h4>
+                <a href="/static/pages/about.html" class="footer-link">About Us</a>
+                <a href="/vision" class="footer-link">Our Vision</a>
+                <a href="/sustainability" class="footer-link">Sustainability</a>
+                <a href="/careers" class="footer-link">Careers</a>
+            </div>
+            <div class="footer-link-column" id="footer-column-2">
+                <h4>Support</h4>
+                <a href="/contact" class="footer-link">Contact Us</a>
+                <a href="/static/pages/about.html#faqHeading" class="footer-link">FAQ</a>
+                <a href="/static/pages/about.html#shipHeading" class="footer-link">Shipping & Returns</a>
+                <a href="/static/pages/about.html#privacyHeading" class="footer-link">Privacy Policy</a>
+            </div>
+            <div class="footer-link-column" id="footer-column-3">
+                <h4>Explore</h4>
+                <a href="/best-sellers" class="footer-link">Best Sellers</a>
+                <a href="/gift-sets" class="footer-link">Gift Sets</a>
+                <a href="/scent-finder" class="footer-link">Scent Finder Quiz</a>
+                <a href="/blog" class="footer-link">Blog & News</a>
+            </div>
+            <div class="footer-link-column" id="footer-column-4">
+                <h4>Contact Info</h4>
+                <a href="mailto:support@wperfumes.com" class="footer-link">Email: support@wperfumes.com</a>
+                <a href="tel:+15551234567" class="footer-link">Phone: +1 (555) 123-4567</a>
+                <a href="/contact#address" class="footer-link">Address: 100 Scent Lane, Perfume City</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Reuse same shared scripts as index.html so behavior is consistent -->
+    <script>
+        window.PLACEHOLDER_IMG = "/static/images/placeholder.jpg";
+        window.DEFAULT_PRODUCT_IMG = "/static/images/default.jpg";
+    </script>
+
+    <script src="/static/js/main.js"></script>
+    <script src="/static/js/announcements.js"></script>
+    <script src="/static/js/footer.js"></script>
+    <script src="/static/js/hero-audio.js"></script>
+    <script src="/static/js/hero-enhance.js"></script>
+
+    <!-- Page-specific JS: sample data + rendering + interactions -->
+    <script>
+        (function () {
+            // NOTE: In production, replace 'samplePerfumers' with server-provided data (AJAX / templating).
+            const samplePerfumers = [
+                // For demo; the system will render top 50 and A-Z. Add more items server-side as needed.
+                { id: 1, name: "Aaron Terence Hughes", company: "Aaron Terence Hughes Fine Fragrance", website: "https://aaronterencehughes.co.uk", count: 40, bio: "Known for modern classic blends and inventive oud combinations.", avatar: window.PLACEHOLDER_IMG, tags: ["oud", "modern"], rank: 1 },
+                { id: 2, name: "Adriana Medina-Baez", company: "Medina Atelier", website: "", count: 18, bio: "A nose with deep roots in florals and gourmand accords.", avatar: window.PLACEHOLDER_IMG, tags: ["floral"], rank: 2 },
+                { id: 3, name: "Albert Hauck", company: "Hauck Fragrances", website: "https://example.com", count: 26, bio: "Pioneer of sustainable extraction techniques.", avatar: window.PLACEHOLDER_IMG, tags: ["sustainable"], rank: 3 },
+                { id: 4, name: "Alex Lee", company: "Alex Lee Parfums", website: "", count: 12, bio: "Minimalist compositions with long-lasting bases.", avatar: window.PLACEHOLDER_IMG, tags: ["minimal"], rank: 4 },
+                { id: 5, name: "Aime Guerlain", company: "Guerlain House", website: "https://guerlain.com", count: 120, bio: "Part of a long perfume dynasty.", avatar: window.PLACEHOLDER_IMG, tags: ["heritage"], rank: 5 },
+                { id: 6, name: "Alessandro Commisso", company: "Commisso", website: "", count: 9, bio: "Innovative youthful scents.", avatar: window.PLACEHOLDER_IMG, tags: ["youthful"], rank: 6 },
+                { id: 7, name: "Alexandra Kalle", company: "Kalle Atelier", website: "", count: 14, bio: "Expert in chypres and dry woods.", avatar: window.PLACEHOLDER_IMG, tags: ["chypre"], rank: 7 },
+                { id: 8, name: "Alain Allione", company: "Allione", website: "", count: 22, bio: "Bold citrus and green notes specialist.", avatar: window.PLACEHOLDER_IMG, tags: ["citrus"], rank: 8 },
+                { id: 9, name: "Abdulla Ajmal", company: "Ajmal", website: "", count: 64, bio: "Large portfolio and classic oriental compositions.", avatar: window.PLACEHOLDER_IMG, tags: ["oriental"], rank: 9 },
+                { id: 10, name: "Agusti Vidal", company: "Vidal Studio", website: "", count: 4, bio: "Crafts bespoke, limited editions.", avatar: window.PLACEHOLDER_IMG, tags: ["bespoke"], rank: 10 },
+                // Add more demo items to fill pages if desired...
+            ];
+
+            // For demonstration make sure we have up to 50 entries (duplicate patterns)
+            while (samplePerfumers.length < 50) {
+                const n = samplePerfumers.length + 1;
+                samplePerfumers.push({
+                    id: 100 + n,
+                    name: `Demo Perfumer ${n}`,
+                    company: `Demo House ${n}`,
+                    website: "",
+                    count: Math.floor(Math.random() * 50),
+                    bio: "Short demo biography about the perfumer and their creative approach.",
+                    avatar: window.PLACEHOLDER_IMG,
+                    tags: ["demo"],
+                    rank: n
+                });
+            }
+
+            // Utilities
+            const $ = (sel, ctx = document) => ctx.querySelector(sel);
+            const $$ = (sel, ctx = document) => Array.from(ctx.querySelectorAll(sel));
+
+            // Render alphabetical index A-Z
+            const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+            const alphaButtons = $("#alphaButtons");
+            letters.forEach(letter => {
+                const btn = document.createElement("button");
+                btn.textContent = letter;
+                btn.dataset.letter = letter;
+                btn.addEventListener("click", () => {
+                    // highlight
+                    $$(".alpha-index button").forEach(b => b.classList.remove("active"));
+                    btn.classList.add("active");
+                    renderAZ(letter);
+                });
+                alphaButtons.appendChild(btn);
+            });
+
+            // Render Top perfumers (paginate 1-5)
+            const topGrid = $("#topGrid");
+            const tabs = $$(".tabs .tab");
+            function renderTop(page = 1, filterText = "") {
+                topGrid.innerHTML = "";
+                // sort by rank ascending and slice by page
+                const byRank = samplePerfumers.slice().sort((a, b) => (a.rank || 999) - (b.rank || 999));
+                const pageIndex = page - 1;
+                const perPage = 10;
+                const pageItems = byRank.slice(pageIndex * perPage, pageIndex * perPage + perPage)
+                    .filter(p => matchesFilter(p, filterText));
+
+                pageItems.forEach(p => {
+                    const card = document.createElement("div");
+                    card.className = "perfumer-card";
+                    card.tabIndex = 0;
+                    card.setAttribute("role", "button");
+                    card.innerHTML = `
+                        <div class="perfumer-avatar" aria-hidden="true"><img src="${p.avatar}" alt=""></div>
+                        <div class="perfumer-info">
+                            <h3 title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</h3>
+                            <p class="muted">${escapeHtml(p.company || "")}</p>
+                            <div class="perfumer-detail" data-id="${p.id}">
+                                <p style="margin:0 0 8px 0;">${escapeHtml(p.bio)}</p>
+                                <p class="muted" style="margin:0;">Website: ${p.website ? `<a href="${p.website}" target="_blank" rel="noopener">${escapeHtml(p.website)}</a>` : "—"}</p>
+                                <p class="muted" style="margin:6px 0 0 0;">Number of perfumes in database: ${p.count}</p>
+                            </div>
+                        </div>
+                    `;
+                    // click toggles detail area
+                    card.addEventListener("click", (ev) => {
+                        // toggle only this card's detail
+                        const detail = card.querySelector(".perfumer-detail");
+                        const isOpen = detail.classList.contains("open");
+                        // close other open details in this grid
+                        $$(".perfumer-detail.open").forEach(d => d.classList.remove("open"));
+                        if (!isOpen) detail.classList.add("open");
+                        else detail.classList.remove("open");
+                    });
+                    topGrid.appendChild(card);
+                });
+
+                if (pageItems.length === 0) {
+                    topGrid.innerHTML = `<div class="muted center">No perfumers found for this page / filter.</div>`;
+                }
+            }
+
+            tabs.forEach(tab => {
+                tab.addEventListener("click", () => {
+                    tabs.forEach(t => t.classList.remove("active"));
+                    tab.classList.add("active");
+                    const page = Number(tab.dataset.page || 1);
+                    renderTop(page, $("#perfumerSearch").value.trim());
+                });
+            });
+
+            // Render A-Z listing for a letter
+            const azContainer = $("#azContainer");
+            function renderAZ(letter) {
+                azContainer.innerHTML = "";
+                const letterItems = samplePerfumers
+                    .filter(p => p.name.toUpperCase().startsWith(letter))
+                    .sort((a, b) => a.name.localeCompare(b.name));
+
+                if (letterItems.length === 0) {
+                    azContainer.innerHTML = `<div class="muted">No perfumers found for "${letter}".</div>`;
+                    return;
+                }
+
+                letterItems.forEach(p => {
+                    const item = document.createElement("div");
+                    item.className = "az-item";
+                    item.innerHTML = `
+                        <div class="small-avatar"><img src="${p.avatar}" alt=""></div>
+                        <div>
+                            <div style="font-weight:700; color:#053d3b;">${escapeHtml(p.name)}</div>
+                            <div class="muted" style="font-size:0.85rem;">${escapeHtml(p.company || "")}</div>
+                        </div>
+                    `;
+                    // on click expand detailed panel below the A-Z section (insert or toggle)
+                    item.addEventListener("click", () => {
+                        openPerfumerDetailInline(p);
+                    });
+                    azContainer.appendChild(item);
+                });
+            }
+
+            // Open inline detail area for a perfumer (below A-Z list)
+            function openPerfumerDetailInline(p) {
+                // remove existing detail if any
+                const existing = $("#az-detail");
+                if (existing) existing.remove();
+
+                const detail = document.createElement("div");
+                detail.id = "az-detail";
+                detail.className = "perfumer-detail open";
+                detail.style.marginTop = "12px";
+                detail.innerHTML = `
+                    <div style="display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;">
+                        <div style="flex:0 0 120px;">
+                            <div style="width:120px;height:120px;border-radius:12px;overflow:hidden;border:1px solid #eef6f6;">
+                                <img src="${p.avatar}" alt="${escapeHtml(p.name)}" style="width:100%;height:100%;object-fit:cover;">
+                            </div>
+                        </div>
+                        <div style="flex:1;min-width:220px;">
+                            <h3 style="margin:0 0 6px 0;color:#053d3b;">${escapeHtml(p.name)}</h3>
+                            <div class="muted" style="margin-bottom:8px;">${escapeHtml(p.company || "")}</div>
+                            <p style="margin:0 0 8px 0;">${escapeHtml(p.bio)}</p>
+                            <p class="muted" style="margin:0;">Website: ${p.website ? `<a href="${p.website}" target="_blank" rel="noopener">${escapeHtml(p.website)}</a>` : "—"}</p>
+                            <p class="muted" style="margin:6px 0 0 0;">Number of perfumes in database: ${p.count}</p>
+                            <div style="margin-top:12px;">
+                                <a class="btn btn-ghost" href="/search?perfumer=${encodeURIComponent(p.name)}">View perfumes</a>
+                                <button class="btn btn-primary" id="closeDetail">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                azContainer.parentNode.insertBefore(detail, azContainer.nextSibling);
+                $("#closeDetail").addEventListener("click", () => detail.remove());
+                detail.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+
+            // Stories (short editorial cards) - sample content
+            const storiesSection = $("#stories");
+            const sampleStories = [
+                { title: "The Rise of Natural Oud", excerpt: "How oud traveled from traditional Middle-Eastern perfumery to global luxury collections.", author: "Editorial", image: window.PLACEHOLDER_IMG },
+                { title: "Becoming a Nose: Training & Passion", excerpt: "A short guide on how perfumers study materials, their tasting 'organ' and life-long learning.", author: "Editorial", image: window.PLACEHOLDER_IMG },
+                { title: "Sustainable Extraction Methods", excerpt: "Innovations in CO2 extraction and solvent-free techniques that preserve delicate notes.", author: "Editorial", image: window.PLACEHOLDER_IMG }
+            ];
+            function renderStories() {
+                storiesSection.innerHTML = "";
+                sampleStories.forEach(s => {
+                    const card = document.createElement("article");
+                    card.className = "story-card";
+                    card.innerHTML = `
+                        <h4>${escapeHtml(s.title)}</h4>
+                        <p class="muted" style="margin-bottom:8px;">By ${escapeHtml(s.author)}</p>
+                        <p>${escapeHtml(s.excerpt)}</p>
+                    `;
+                    storiesSection.appendChild(card);
+                });
+            }
+
+            // Search / filter functionality
+            const searchInput = $("#perfumerSearch");
+            const clearBtn = $("#clearSearch");
+            function matchesFilter(p, text) {
+                if (!text) return true;
+                const t = text.toLowerCase();
+                return (p.name && p.name.toLowerCase().includes(t))
+                    || (p.company && p.company.toLowerCase().includes(t))
+                    || (p.tags && p.tags.join(" ").toLowerCase().includes(t));
+            }
+            function handleSearchChange() {
+                const txt = searchInput.value.trim();
+                // Update top grid current active tab
+                const activeTab = $(".tab.active");
+                const page = activeTab ? Number(activeTab.dataset.page) : 1;
+                renderTop(page, txt);
+
+                // If there's active letter, re-render its list filtered
+                const activeLetterBtn = $$(".alpha-index button.active")[0];
+                if (activeLetterBtn) {
+                    const letter = activeLetterBtn.dataset.letter;
+                    // Temporarily filter letter results
+                    azContainer.innerHTML = "";
+                    const filtered = samplePerfumers
+                        .filter(p => p.name.toUpperCase().startsWith(letter))
+                        .filter(p => matchesFilter(p, txt))
+                        .sort((a, b) => a.name.localeCompare(b.name));
+                    if (filtered.length === 0) {
+                        azContainer.innerHTML = `<div class="muted">No perfumers for "${letter}" match your search</div>`;
+                    } else {
+                        filtered.forEach(p => {
+                            const item = document.createElement("div");
+                            item.className = "az-item";
+                            item.innerHTML = `
+                                <div class="small-avatar"><img src="${p.avatar}" alt=""></div>
+                                <div>
+                                    <div style="font-weight:700; color:#053d3b;">${escapeHtml(p.name)}</div>
+                                    <div class="muted" style="font-size:0.85rem;">${escapeHtml(p.company || "")}</div>
+                                </div>
+                            `;
+                            item.addEventListener("click", () => openPerfumerDetailInline(p));
+                            azContainer.appendChild(item);
+                        });
+                    }
+                } else {
+                    // if no active letter, show first page of A items
+                    renderAZ("A");
+                }
+            }
+
+            clearBtn.addEventListener("click", () => {
+                searchInput.value = "";
+                handleSearchChange();
+            });
+            searchInput.addEventListener("input", debounce(handleSearchChange, 150));
+
+            // Utilities: debounce & escapeHtml
+            function debounce(fn, wait) {
+                let t;
+                return function (...a) {
+                    clearTimeout(t);
+                    t = setTimeout(() => fn.apply(this, a), wait);
+                };
+            }
+            function escapeHtml(str) {
+                if (!str) return "";
+                return String(str)
+                    .replaceAll("&", "&amp;")
+                    .replaceAll("<", "&lt;")
+                    .replaceAll(">", "&gt;")
+                    .replaceAll('"', "&quot;")
+                    .replaceAll("'", "&#039;");
+            }
+
+            // initial render
+            renderTop(1);
+            renderAZ("A");
+            renderStories();
+
+            // toggle stories view: smooth scroll
+            $("#toggleStoriesBtn").addEventListener("click", () => {
+                const s = $("#stories");
+                if (!s) return;
+                s.scrollIntoView({ behavior: "smooth" });
+            });
+
+            // initial highlight A button
+            const firstAlphaBtn = $$(".alpha-index button")[0];
+            if (firstAlphaBtn) firstAlphaBtn.classList.add("active");
+
+            // Optional: quick click on perfumer card navigates to /perfumer/:id (uncomment if route exists)
+            // topGrid.addEventListener('click', (e) => { ... });
+
+        })();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Login - WPerfumes</title>
+
+    <!-- Main stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+
+    <style>
+        /* Small page-specific overrides */
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(180deg, #fff 0%, #f2ebe6 100%);
+            color: #222;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+            padding: 28px;
+            width: 100%;
+            max-width: 420px;
+        }
+
+        h1 {
+            margin: 0 0 8px 0;
+            font-size: 22px;
+        }
+
+        p.lead {
+            margin: 0 0 16px 0;
+            color: #555;
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        input[type="email"],
+        input[type="password"] {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid #e6e6e6;
+            box-sizing: border-box;
+            font-size: 15px;
+        }
+
+        .actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: none;
+            background: #2d8f7c;
+            color: #fff;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .btn.secondary {
+            background: #f0f0f0;
+            color: #222;
+            border: 1px solid #dedede;
+            font-weight: 600;
+        }
+
+        .links {
+            margin-top: 12px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.95rem;
+        }
+
+        .msg {
+            margin-top: 12px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .msg.success {
+            background: #e6f9ef;
+            color: #1b7a50;
+            border: 1px solid #c6efd9;
+        }
+
+        .msg.error {
+            background: #fff1f1;
+            color: #b02a2a;
+            border: 1px solid #f2c6c6;
+        }
+
+        @media (max-width:480px) {
+            .card {
+                padding: 18px;
+                margin: 12px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main class="card" role="main" aria-labelledby="login-heading">
+        <h1 id="login-heading">Sign in to WPerfumes</h1>
+        <p class="lead">Welcome back — enter your email and password to continue.</p>
+
+        <!-- Keep action as a safe server fallback; JS will intercept and POST to the API -->
+        <form id="loginForm" action="/api/auth/login" method="POST" novalidate>
+            <div class="form-group">
+                <label for="email">Email address</label>
+                <input id="email" name="email" type="email" inputmode="email" required autocomplete="email"
+                    placeholder="name@example.com">
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input id="password" name="password" type="password" required autocomplete="current-password"
+                    placeholder="••••••••">
+            </div>
+
+            <div class="actions">
+                <button id="submitBtn" type="submit" class="btn">Sign in</button>
+                <a href="{{ url_for('main.index') }}" class="btn secondary"
+                    style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;">Back
+                    Home</a>
+            </div>
+
+            <div id="msg" class="msg" role="status" aria-live="polite"></div>
+
+            <div class="links">
+                <a href="{{ url_for('main.forgot_password') }}">Forgot password?</a>
+                <a href="{{ url_for('main.signup') }}">Create an account</a>
+            </div>
+        </form>
+    </main>
+
+    <script>
+        (function () {
+            // Relative API base so code works in dev and production
+            const API = "/api";
+
+            const form = document.getElementById('loginForm');
+            const emailEl = document.getElementById('email');
+            const passwordEl = document.getElementById('password');
+            const submitBtn = document.getElementById('submitBtn');
+            const msgEl = document.getElementById('msg');
+
+            function showMessage(text, kind = 'error') {
+                msgEl.className = 'msg ' + (kind === 'success' ? 'success' : 'error');
+                msgEl.textContent = text;
+                msgEl.style.display = 'block';
+            }
+            function hideMessage() {
+                msgEl.style.display = 'none';
+                msgEl.textContent = '';
+            }
+
+            form.addEventListener('submit', async function (e) {
+                // Intercept the form submission and POST JSON to the API for nicer UX
+                e.preventDefault();
+                hideMessage();
+
+                const email = (emailEl.value || '').trim();
+                const password = (passwordEl.value || '').trim();
+
+                if (!email) {
+                    showMessage('Please provide your email address.', 'error');
+                    emailEl.focus();
+                    return;
+                }
+                if (!password) {
+                    showMessage('Please provide your password.', 'error');
+                    passwordEl.focus();
+                    return;
+                }
+
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Signing in...';
+
+                try {
+                    const res = await fetch(`${API}/auth/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'same-origin',
+                        body: JSON.stringify({ email, password })
+                    });
+
+                    if (res.ok) {
+                        // Accept both {user: {...}} and {success:true, redirect: "/..."} shapes
+                        let data = null;
+                        try { data = await res.json(); } catch (err) { data = null; }
+
+                        showMessage('Signed in successfully. Redirecting...', 'success');
+
+                        // If server returned a redirect, follow it; otherwise go to home
+                        const redirectTo = (data && (data.redirect || (data.user && data.user.redirect))) || '/';
+                        setTimeout(() => { window.location.href = redirectTo; }, 600);
+                        return;
+                    }
+
+                    // Handle failure
+                    let errText = 'Sign in failed — please check your credentials.';
+                    try {
+                        const errData = await res.json();
+                        if (errData && (errData.error || errData.message)) errText = errData.error || errData.message;
+                    } catch (e) {
+                        // ignore parse errors
+                        if (res.status === 401) errText = 'Invalid email or password.';
+                        else errText = res.statusText || errText;
+                    }
+                    showMessage(errText, 'error');
+                } catch (networkErr) {
+                    console.warn('Login network error', networkErr);
+                    showMessage('Network error — please check your connection and try again.', 'error');
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Sign in';
+                }
+            });
+
+            // Hide message when user starts typing again
+            [emailEl, passwordEl].forEach(el => el.addEventListener('input', () => {
+                if (msgEl.style.display === 'block') hideMessage();
+            }));
+
+            // Accessibility: focus email field on load
+            window.addEventListener('load', () => emailEl.focus());
+        })();
+    </script>
+
+    <!-- Optional shared JS -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+
+</html>
