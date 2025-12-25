@@ -1,0 +1,13 @@
+[35mREADME.md[m[36m:[m[32m76[m[36m:[m   export DATABASE_URL="[1;31mpostgresql://[myouruser:yourpass@localhost:5432/yourdb"
+[35mapp/__init__.py[m[36m:[m[32m6[m[36m:[m - Normalizes DATABASE_URL (postgres:// -> [1;31mpostgresql://[m)
+[35mapp/__init__.py[m[36m:[m[32m32[m[36m:[m        return url.replace("postgres://", "[1;31mpostgresql://[m", 1)
+[35mapp/__init__.py[m[36m:[m[32m38[m[36m:[m    If url is a [1;31mpostgresql://[m DSN and doesn't contain sslmode=, append sslmode=require.
+[35mapp/__init__.py[m[36m:[m[32m44[m[36m:[m    if u.startswith("[1;31mpostgresql://[m") and "sslmode=" not in u:
+[35mapp/__init__.py[m[36m:[m[32m135[m[36m:[m        if database_url.startswith("[1;31mpostgresql://[m"):
+[35mapp/__init__.py[m[36m:[m[32m274[m[36m:[m                # naive parse: [1;31mpostgresql://[muser:pass@host:port/db?...
+[35mdev-scripts/test_conn.py[m[36m:[m[32m3[m[36m:[mdsn = os.environ.get("DATABASE_URL") or "[1;31mpostgresql://[mwperfumes_hfdk_user:7zfVME5Jn9Unb3mPgUwMchsvIzZAn5nY@dpg-d55932i4d50c739q8000-a.oregon-postgres.render.com/wperfumes_hfdk?sslmode=require"
+[35mflask_startup.log[m[36m:[m[32m54[m[36m:[m[2025-11-23 13:08:45,566] DEBUG in __init__: Database configured at: [1;31mpostgresql://[mwperfumes_zbnw_user:M3NuqINTvVPywCuemEmXnrqHjyOkTdek@dpg-d4h98lruibrs73df6geg-a.oregon-postgres.render.com/wperfumes_zbnw
+[35mflask_startup.log[m[36m:[m[32m258[m[36m:[m[2025-11-23 13:08:56,268] DEBUG in __init__: Database configured at: [1;31mpostgresql://[mwperfumes_zbnw_user:M3NuqINTvVPywCuemEmXnrqHjyOkTdek@dpg-d4h98lruibrs73df6geg-a.oregon-postgres.render.com/wperfumes_zbnw
+[35minstance/config.py[m[36m:[m[32m2[m[36m:[mDATABASE_URL = "[1;31mpostgresql://[mwperfumes_hfdk_user:7zfVME5Jn9Unb3mPgUwMchsvIzZAn5nY@dpg-d55932i4d50c739q8000-a.oregon-postgres.render.com/wperfumes_hfdk?sslmode=require"
+[35mscripts/transfer_sqlite_to_postgres.py[m[36m:[m[32m9[m[36m:[m  export POSTGRES_DSN="[1;31mpostgresql://[muser:pass@host:5432/dbname?sslmode=require"
+[35mtools/migrate_sqlite_to_postgres.py[m[36m:[m[32m14[m[36m:[m  export DATABASE_URL='[1;31mpostgresql://[muser:pass@host:port/dbname'
