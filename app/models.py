@@ -33,6 +33,13 @@ class Product(db.Model):
     quantity = db.Column(db.Integer, default=10)
     tags = db.Column(db.String)
 
+    # Human-friendly code (PRD0001, PRD0002, ...)
+    # NOTE: the DB migration script scripts/init_product_codes.sql will backfill this
+    # column and create DB-level automation. To avoid startup errors before running
+    # the migration, this column is nullable=True here. After migration you may set
+    # nullable=False if desired.
+    code = db.Column(db.String(32), unique=True, index=True, nullable=True)
+
     @property
     def image_url_dynamic(self):
         """
@@ -46,6 +53,26 @@ class Product(db.Model):
         brand_folder = self.brand.lower().replace(" ", "_").replace("'", "")
         product_file = self.title.lower().replace(" ", "_").replace("'", "") + ".jpg"
         return f"images/{brand_folder}/{product_file}"
+
+    def to_dict(self):
+        """
+        Public serializer for API responses. Include the human-friendly code (product.code)
+        and fall back to id where appropriate. Add fields the frontend expects.
+        """
+        return {
+            "id": self.id,
+            "code": self.code,
+            "brand": self.brand,
+            "title": self.title,
+            "price": self.price,
+            "description": self.description,
+            "keyNotes": self.keyNotes,
+            "image_url": self.image_url if self.image_url else self.image_url_dynamic,
+            "thumbnails": self.thumbnails,
+            "status": self.status,
+            "quantity": self.quantity,
+            "tags": self.tags,
+        }
 
 
 class HomepageProduct(db.Model):
@@ -91,6 +118,34 @@ class OrderAttempt(db.Model):
     status = db.Column(db.String)
     timestamp = db.Column(
         db.String, default=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
+
+# -------------------------
+# ProductCode reservation table
+# -------------------------
+class ProductCode(db.Model):
+    """
+    product_code table mirrors the DB table created by the migration script.
+    It records the numeric allocation and the generated code (PRDxxxx), the product_id
+    it was assigned to (nullable once the product is deleted), a snapshot of the product
+    name, and the assignment timestamp.
+
+    The DB migration creates:
+      - a sequence product_code_seq
+      - a table product_code with a generated code = 'PRD' || lpad(num,4,'0')
+      - triggers to auto-assign a code on INSERT into product
+      - triggers to unlink product_id on product DELETE (reservation remains)
+    """
+    __tablename__ = 'product_code'
+    num = db.Column(db.BigInteger, primary_key=True)
+    code = db.Column(db.String(32), unique=True, nullable=False)
+    product_id = db.Column(
+        db.String(64), db.ForeignKey('product.id'), nullable=True)
+    product_name = db.Column(db.Text, nullable=True)
+    assigned_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<ProductCode {self.code} -> {self.product_id}>"
 
 
 # -------------------------

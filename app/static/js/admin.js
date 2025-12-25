@@ -1,13 +1,3 @@
-/* admin.js - Complete single-file admin script
-   - Full CRUD for Brands, Products, Homepage Products (brand->product selector),
-     Top Picks, Coupons, Orders
-   - Price Comparison (v3)
-   - Content admin (Quill-based)
-   - Modal helpers, notifications, utilities
-   - Defensive wiring to avoid legacy hpModal double-popup
-   Drop this file into /static/js/admin.js and hard-refresh the admin page.
-*/
-
 const API = "/api";
 const CONTENT_API = "/content-api";
 
@@ -56,11 +46,7 @@ function debounce(fn, wait) {
 
 /* ------------------------------
    Price sanitization helper
-   ------------------------------
-   Removes currency symbols, grouping commas and whitespace,
-   keeps digits, decimal point and optional leading minus.
-   Normalizes multiple decimal points by keeping the first.
-*/
+   ------------------------------ */
 function sanitizePriceString(raw) {
     if (raw === null || raw === undefined) return '';
     let s = String(raw).trim();
@@ -106,7 +92,6 @@ function adminNotify(msg, type = 'info', timeout = 2500) {
 
 /* ------------------------------
    Defensive: remove legacy hpModal and rewire Add Homepage button
-   Ensures only one modal opens (the new admin.js modal).
    ------------------------------ */
 (function protectHomepageButtonAndRemoveLegacyModal() {
     try {
@@ -283,7 +268,8 @@ function createPcRow_v3(data = {}) {
     tr.innerHTML = `
         <td style="width:220px"><input class="pc-name" type="text" value="${escapeHtmlAttr(name)}" placeholder="Competitor Brand" required></td>
         <td style="width:150px"><input class="pc-product-id" type="text" value="${escapeHtmlAttr(product_id)}" placeholder="PRD001 (required)" required></td>
-        <td style="width:140px"><input class="pc-our-price" type="number" step="0.01" min="0" value="${escapeHtmlAttr(our_price)}" placeholder="Our price (optional)"></td>
+        <td style="width:220px"><input class="pc-product-name" type="text" value="${escapeHtmlAttr(data.product_name || '')}" placeholder="Auto-filled product name" readonly></td>
+        <td style="width:140px"><input class="pc-our-price" type="text" step="0.01" min="0" value="${escapeHtmlAttr(our_price)}" placeholder="Our price (optional)" readonly></td>
         <td style="width:160px"><input class="pc-competitor-price" type="number" step="0.01" min="0" value="${escapeHtmlAttr(competitor_price)}" placeholder="Competitor price (optional)"></td>
         <td style="width:70px" class="action"><button class="btn small danger pc-remove">Remove</button></td>
     `;
@@ -307,6 +293,7 @@ function renderPcTable_v3(list) {
         const tr = createPcRow_v3({
             name: item.name || '',
             product_id: item.product_id || '',
+            product_name: item.product_name || '',
             our_price: (item.our_price !== undefined ? item.our_price : (item.ourPrice || '')),
             competitor_price: (item.competitor_price !== undefined ? item.competitor_price : (item.manual_price !== undefined ? item.manual_price : (item.competitorPrice || '')))
         });
@@ -479,7 +466,7 @@ function showBrandModal(brand) {
 if (el('addBrandBtn')) el('addBrandBtn').addEventListener('click', () => showBrandModal(null));
 
 /* ------------------------------
-   Products CRUD
+   Products CRUD (updated to handle product.code)
    ------------------------------ */
 async function loadProducts() {
     try {
@@ -498,6 +485,7 @@ async function loadProducts() {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${escapeHtml(p.title)}</td>
+                <td>${escapeHtml(p.code || '')}</td>
                 <td>${escapeHtml(p.brand)}</td>
                 <td>$${priceVal}</td>
                 <td>${escapeHtml(p.status || '')}</td>
@@ -524,24 +512,24 @@ async function loadProducts() {
 
 if (el('addProductBtn')) el('addProductBtn').addEventListener('click', () => showProductModal(null));
 
-/* Helper: open product editor by id (prevents ReferenceError and works with single-product endpoint or list) */
-async function openProductEditorById(id) {
+/* Helper: open product editor by id (supports id or code) */
+async function openProductEditorById(idOrCode) {
     try {
-        if (!id) return;
-        // try single-product endpoint first
+        if (!idOrCode) return;
+        // try single-product endpoint first (by id)
         try {
-            const resSingle = await apiFetch(`${API}/products/${encodeURIComponent(id)}`);
+            const resSingle = await apiFetch(`${API}/products/${encodeURIComponent(idOrCode)}`);
             if (resSingle.ok) {
                 const product = await resSingle.json().catch(() => null);
                 if (product) { showProductModal(product); return; }
             }
         } catch (e) { /* ignore and fall back */ }
 
-        // fallback to fetching list and find product by id
+        // fallback to fetching list and find product by id or code
         const res = await apiFetch(`${API}/products`);
         if (!res.ok) return;
         const list = await res.json();
-        const product = (list || []).find(p => String(p.id) === String(id) || String(p._id) === String(id));
+        const product = (list || []).find(p => String(p.id) === String(idOrCode) || String(p._id) === String(idOrCode) || String(p.code) === String(idOrCode));
         showProductModal(product);
     } catch (err) { console.warn('openProductEditorById error', err); }
 }
@@ -552,6 +540,7 @@ function showProductModal(product) {
         if (!modalBg || !modalContent) return;
         modalBg.style.display = 'flex';
         const title = product ? escapeHtmlAttr(product.title) : '';
+        const code = product ? escapeHtmlAttr(product.code || '') : '';
         const price = product ? escapeHtmlAttr(product.price) : '';
         const qty = product && typeof product.quantity === 'number' ? product.quantity : 10;
         const status = product ? escapeHtmlAttr(product.status || '') : '';
@@ -565,6 +554,8 @@ function showProductModal(product) {
             <form id="productFormModal">
                 <label>Title</label>
                 <input name="title" required value="${title}">
+                <label>Code (e.g. PRD0001) — optional</label>
+                <input name="code" value="${code}" placeholder="PRD0001">
                 <label>Brand</label>
                 <select name="brand" required>
                     ${brands.map(b => `<option value="${escapeHtmlAttr(b.name)}" ${product && product.brand == b.name ? 'selected' : ''}>${escapeHtml(b.name)}</option>`).join('')}
@@ -611,13 +602,18 @@ function showProductModal(product) {
             formData.price = (Number.isFinite(parsedPrice) && !Number.isNaN(parsedPrice)) ? parsedPrice : 0.0;
 
             formData.quantity = parseInt(formData.quantity, 10) || 0;
+
+            // Keep code as-is if provided; otherwise, leave it undefined so DB triggers/backfill can handle it.
+            if (formData.code === '') delete formData.code;
+
             try {
                 let res;
                 if (product) {
-                    formData.id = product.id;
+                    // Update existing product by UUID; include code in the payload so it can be saved/changed
                     res = await apiFetch(`${API}/products/${encodeURIComponent(product.id)}`, { method: 'PUT', body: formData });
                 } else {
-                    formData.id = 'PRD' + Math.floor(Date.now() / 10000).toString().slice(-4) + Math.floor(Math.random() * 99).toString().padStart(2, '0');
+                    // Create new product. Do NOT set id here; let server create its internal id (UUID).
+                    // Provide code if admin entered one (formData.code).
                     res = await apiFetch(`${API}/products`, { method: 'POST', body: formData });
                 }
                 if (!res.ok) { const txt = await res.text(); adminNotify('Save failed: ' + txt, 'error'); }
@@ -632,10 +628,10 @@ function showProductModal(product) {
    Homepage Products CRUD (brand->product selection)
    ------------------------------ */
 
-/* Helper: findProductInListById */
+/* Helper: findProductInListById - supports id or code */
 function findProductInListById(list, id) {
     if (!Array.isArray(list)) return null;
-    return list.find(p => String(p.id || p._id || '') === String(id));
+    return list.find(p => String(p.id || p._id || '') === String(id) || String(p.code || '') === String(id));
 }
 
 async function loadHomepageProducts() {
@@ -808,7 +804,8 @@ async function showHomepageModal(hp) {
         filtered.forEach(p => {
             const opt = document.createElement('option');
             opt.value = String(p.id || p._id || '');
-            opt.textContent = `${p.title || p.name || ''}${p.price ? ' — ' + Number(p.price).toFixed(2) : ''}`;
+            const displayId = p.code || p.id || '';
+            opt.textContent = `${p.title || p.name || ''}${p.price ? ' — ' + Number(p.price).toFixed(2) : ''} (${displayId})`;
             productSelect.appendChild(opt);
         });
         productSelect.disabled = false;
@@ -832,7 +829,7 @@ async function showHomepageModal(hp) {
         const prod = findProductInListById(products, pid);
         if (prod) {
             titleInput.value = prod.title || prod.name || '';
-            productIdInput.value = prod.id || prod._id || '';
+            productIdInput.value = prod.code || prod.id || '';
             if (prod.price !== undefined && prod.price !== null) priceInput.value = prod.price;
             const prodBrand = prod.brand || '';
             if (prodBrand) {
@@ -998,7 +995,7 @@ function showTopPickModal(tp) {
             <form id="topPickFormModal">
                 <label>Product</label>
                 <select name="product_id" required>
-                    ${products.map(p => `<option value="${escapeHtmlAttr(p.id)}" ${tp && tp.product_id == p.id ? 'selected' : ''}>${escapeHtml(p.title)} (${escapeHtml(p.brand)})</option>`).join('')}
+                    ${products.map(p => `<option value="${escapeHtmlAttr(p.id)}" ${tp && tp.product_id == p.id ? 'selected' : ''}>${escapeHtml(p.title)} (${escapeHtml(p.brand)}) — ${escapeHtml(p.code || p.id)}</option>`).join('')}
                 </select>
                 <label>Rank</label>
                 <input name="rank" type="number" min="1" max="100" value="${tp ? escapeHtmlAttr(tp.rank || '') : ''}" required>
@@ -1207,7 +1204,7 @@ function showOrderModal(order) {
                     <textarea name="customer_address" required rows="2">${custAddress}</textarea>
                     <label>Product</label>
                     <select name="product_id" required>
-                        ${products.map(p => `<option value="${escapeHtmlAttr(p.id)}" ${order && order.product_id == p.id ? 'selected' : ''}>${escapeHtml(p.title)}</option>`).join('')}
+                        ${products.map(p => `<option value="${escapeHtmlAttr(p.id)}" ${order && order.product_id == p.id ? 'selected' : ''}>${escapeHtml(p.title)} — ${escapeHtml(p.brand)} (${escapeHtml(p.code || p.id)})</option>`).join('')}
                     </select>
                     <label>Quantity</label>
                     <input name="quantity" type="number" min="1" value="${qty}">
@@ -1507,5 +1504,3 @@ if (el('modalBg')) { el('modalBg').onclick = function (e) { if (e.target === thi
 
 /* Start on brands tab */
 switchTab('brands');
-
-/* End of admin.js */

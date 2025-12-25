@@ -1,10 +1,10 @@
 # app/routes.py
-from flask import session
 from flask import Blueprint, request, jsonify, session, render_template, url_for, redirect, current_app
 from flask_mail import Message
 from datetime import datetime
 from . import db, mail
 from .models import Brand, Product, HomepageProduct, Coupon, Order, OrderAttempt, Story
+from sqlalchemy import or_
 import re
 
 bp = Blueprint("main", __name__)
@@ -284,23 +284,29 @@ def delete_brand(name):
 
 @bp.route('/api/products', methods=['GET'])
 def get_products():
-    products = Product.query.all()
-    return jsonify([
-        {
-            "id": p.id,
-            "brand": p.brand,
-            "title": p.title,
-            "price": p.price,
-            "description": p.description,
-            "keyNotes": p.keyNotes.split(";") if p.keyNotes else [],
-            "image_url": to_static_url(p.image_url or p.image_url_dynamic),
-            "thumbnails": p.thumbnails if p.thumbnails else "",
-            "status": p.status,
-            "quantity": p.quantity,
-            "tags": p.tags
-        }
-        for p in products
-    ])
+    """
+    Return a list of products. Prefer using Product.to_dict() so product.code is included.
+    Supports optional ?q= and ?limit= for simple searching and limiting.
+    """
+    q_param = request.args.get('q', None)
+    limit = request.args.get('limit', type=int)
+
+    query = Product.query
+    if q_param:
+        like = f"%{q_param}%"
+        query = query.filter(
+            or_(
+                Product.title.ilike(like),
+                Product.brand.ilike(like),
+                Product.code.ilike(like),
+                Product.tags.ilike(like)
+            )
+        )
+    query = query.order_by(Product.title)
+    if limit and limit > 0:
+        query = query.limit(limit)
+    products = query.all()
+    return jsonify([p.to_dict() for p in products])
 
 
 @bp.route('/api/products', methods=['POST'])
@@ -330,6 +336,11 @@ def add_product():
         quantity=quantity,
         tags=data.get("tags", "")
     )
+
+    # accept optional human-friendly code (admin may supply PRDxxxx)
+    if data.get("code"):
+        product.code = data.get("code")
+
     db.session.add(product)
     db.session.commit()
     return jsonify({"success": True})
@@ -374,6 +385,13 @@ def update_product(id):
             # keep existing quantity on parse failure
             pass
     prod.tags = data.get("tags", prod.tags)
+
+    # allow updating human-friendly code (if provided)
+    if "code" in data:
+        new_code = data.get("code")
+        # Accept empty to clear, or set new value
+        prod.code = new_code if new_code else None
+
     db.session.commit()
     return jsonify({"success": True})
 
@@ -405,6 +423,7 @@ def get_product_by_id():
     """
     Client expects: GET /api/product_by_id?product_id=PRD123
     Return a single product JSON object or 404.
+    This endpoint will try to resolve by UUID then by product.code (PRDxxxx).
     """
     product_id = request.args.get('product_id') or request.args.get('id') or ''
     if not product_id:
@@ -412,21 +431,13 @@ def get_product_by_id():
 
     prod = Product.query.filter_by(id=product_id).first()
     if not prod:
+        # fallback to code lookup
+        prod = Product.query.filter_by(code=product_id).first()
+    if not prod:
         return jsonify({"error": "Product not found"}), 404
 
-    return jsonify({
-        "id": prod.id,
-        "brand": prod.brand,
-        "title": prod.title,
-        "price": prod.price,
-        "description": prod.description,
-        "keyNotes": prod.keyNotes.split(";") if prod.keyNotes else [],
-        "image_url": to_static_url(prod.image_url or prod.image_url_dynamic),
-        "thumbnails": prod.thumbnails if prod.thumbnails else "",
-        "status": prod.status,
-        "quantity": prod.quantity,
-        "tags": prod.tags
-    })
+    # return full public dict including code
+    return jsonify(prod.to_dict())
 
 
 # NEW: compatible fallback endpoint used by some client pages
@@ -436,6 +447,7 @@ def get_product_by_brand_query():
     Client fallback: GET /api/product?brand=Amouage&product=Gold
     Accepts brand & product as query params (slugs with underscores),
     returns a single product JSON or 404. Mirrors existing /api/products/<brand>/<product>.
+    Also accepts ?product_id= (UUID or PRD code) to return authoritative product.
     """
     brand_param = request.args.get('brand') or ''
     product_param = request.args.get('product') or ''
@@ -445,20 +457,10 @@ def get_product_by_brand_query():
     # Prefer authoritative id if provided
     if product_id:
         prod = Product.query.filter_by(id=product_id).first()
+        if not prod:
+            prod = Product.query.filter_by(code=product_id).first()
         if prod:
-            return jsonify({
-                "id": prod.id,
-                "brand": prod.brand,
-                "title": prod.title,
-                "price": prod.price,
-                "description": prod.description,
-                "keyNotes": prod.keyNotes.split(";") if prod.keyNotes else [],
-                "image_url": to_static_url(prod.image_url or prod.image_url_dynamic),
-                "thumbnails": prod.thumbnails if prod.thumbnails else "",
-                "status": prod.status,
-                "quantity": prod.quantity,
-                "tags": prod.tags
-            })
+            return jsonify(prod.to_dict())
         return jsonify({"error": "Product not found"}), 404
 
     if not brand_param or not product_param:
@@ -471,19 +473,7 @@ def get_product_by_brand_query():
     if not prod:
         return jsonify({"error": "Product not found"}), 404
 
-    return jsonify({
-        "id": prod.id,
-        "brand": prod.brand,
-        "title": prod.title,
-        "price": prod.price,
-        "description": prod.description,
-        "keyNotes": prod.keyNotes.split(";") if prod.keyNotes else [],
-        "image_url": to_static_url(prod.image_url or prod.image_url_dynamic),
-        "thumbnails": prod.thumbnails if prod.thumbnails else "",
-        "status": prod.status,
-        "quantity": prod.quantity,
-        "tags": prod.tags
-    })
+    return jsonify(prod.to_dict())
 
 
 @bp.route('/api/products/<brand>', methods=['GET'])
@@ -491,37 +481,10 @@ def get_products_by_brand(brand):
     # If brand param actually matches a product id, return that product
     by_id = Product.query.filter_by(id=brand).first()
     if by_id:
-        return jsonify({
-            "id": by_id.id,
-            "brand": by_id.brand,
-            "title": by_id.title,
-            "price": by_id.price,
-            "description": by_id.description,
-            "keyNotes": by_id.keyNotes.split(";") if by_id.keyNotes else [],
-            "image_url": to_static_url(by_id.image_url or by_id.image_url_dynamic),
-            "thumbnails": by_id.thumbnails if by_id.thumbnails else "",
-            "status": by_id.status,
-            "quantity": by_id.quantity,
-            "tags": by_id.tags
-        })
+        return jsonify(by_id.to_dict())
     brand_name = brand.replace('_', ' ')
     products = Product.query.filter_by(brand=brand_name).all()
-    return jsonify([
-        {
-            "id": p.id,
-            "brand": p.brand,
-            "title": p.title,
-            "price": p.price,
-            "description": p.description,
-            "keyNotes": p.keyNotes.split(";") if p.keyNotes else [],
-            "image_url": to_static_url(p.image_url or p.image_url_dynamic),
-            "thumbnails": p.thumbnails if p.thumbnails else "",
-            "status": p.status,
-            "quantity": p.quantity,
-            "tags": p.tags
-        }
-        for p in products
-    ])
+    return jsonify([p.to_dict() for p in products])
 
 
 @bp.route('/api/products/<brand>/<product>', methods=['GET'])
@@ -531,20 +494,13 @@ def get_product_detail(brand, product):
     prod = Product.query.filter_by(
         brand=brand_name, title=product_title).first()
     if not prod:
+        # attempt to resolve by code (PRDxxxx) or by id
+        prod = Product.query.filter_by(code=product).first()
+    if not prod:
+        prod = Product.query.filter_by(id=product).first()
+    if not prod:
         return jsonify({"error": "Product not found"}), 404
-    return jsonify({
-        "id": prod.id,
-        "brand": prod.brand,
-        "title": prod.title,
-        "price": prod.price,
-        "description": prod.description,
-        "keyNotes": prod.keyNotes.split(";") if prod.keyNotes else [],
-        "image_url": to_static_url(prod.image_url or prod.image_url_dynamic),
-        "thumbnails": prod.thumbnails if prod.thumbnails else "",
-        "status": prod.status,
-        "quantity": prod.quantity,
-        "tags": prod.tags
-    })
+    return jsonify(prod.to_dict())
 
 
 @bp.route('/api/homepage-products', methods=['GET'])
@@ -562,6 +518,7 @@ def get_homepage_products():
                 "homepage_id": hp.homepage_id,
                 "section": hp.section,
                 "id": prod.id,
+                "code": prod.code,
                 "title": prod.title,
                 "brand": prod.brand,
                 "price": prod.price,
