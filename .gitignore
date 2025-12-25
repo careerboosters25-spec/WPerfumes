@@ -21,3 +21,5 @@ wperfumes_render_backup.dump
 .vscode/
 .idea/
 .DS_Store
+wperfumes_local_backup.dump
+wperfumes_backup_2025-11-23.sql
