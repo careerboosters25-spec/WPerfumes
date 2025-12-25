@@ -1,11 +1,10 @@
 # instance/config.py.template
-# Safe template — copy to instance/config.py locally if needed, or set env vars instead.
-# DO NOT commit real credentials. Example values are placeholders.
+# Safe template — do NOT commit real credentials. Use Koyeb env vars instead.
 
-# Preferred: Set DATABASE_URL in environment (Koyeb Secrets / App env).
+# Preferred: Set DATABASE_URL in environment (Koyeb app settings / secrets)
 # DATABASE_URL = "postgresql://<user>:<password>@<host>:<port>/<dbname>?sslmode=require"
 
-# Example optional local overrides:
+# Optional local overrides:
 # SECRET_KEY = "replace-with-secret"
 # MAIL_USERNAME = "your@mail.example"
 # MAIL_PASSWORD = "your-mail-password"
