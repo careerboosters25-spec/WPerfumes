@@ -5,6 +5,7 @@ from datetime import datetime
 from . import db, mail
 from .models import Brand, Product, HomepageProduct, Coupon, Order, OrderAttempt, Story
 from sqlalchemy import or_
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 import re
 
 bp = Blueprint("main", __name__)
@@ -468,8 +469,7 @@ def get_product_by_brand_query():
 
     brand_name = brand_param.replace('_', ' ')
     product_title = product_param.replace('_', ' ')
-    prod = Product.query.filter_by(
-        brand=brand_name, title=product_title).first()
+    prod = Product.query.filter_by(brand=brand_name, title=product_title).first()
     if not prod:
         return jsonify({"error": "Product not found"}), 404
 
@@ -491,8 +491,7 @@ def get_products_by_brand(brand):
 def get_product_detail(brand, product):
     brand_name = brand.replace('_', ' ')
     product_title = product.replace('_', ' ')
-    prod = Product.query.filter_by(
-        brand=brand_name, title=product_title).first()
+    prod = Product.query.filter_by(brand=brand_name, title=product_title).first()
     if not prod:
         # attempt to resolve by code (PRDxxxx) or by id
         prod = Product.query.filter_by(code=product).first()
@@ -566,17 +565,43 @@ def add_homepage_product():
         sort_order = int(sort_val)
     except Exception:
         sort_order = 0
+
+    product_id = data.get("product_id")
+    if not product_id:
+        return jsonify({"error": "product_id_required"}), 400
+
+    # Validate that product exists (avoid FK/IntegrityError)
+    prod = Product.query.filter_by(id=product_id).first()
+    if not prod:
+        return jsonify({"error": "product_not_found", "product_id": product_id}), 400
+
     visible_val = data.get("visible", True)
     visible = bool(visible_val)
     hp = HomepageProduct(
         section=data.get("section"),
-        product_id=data.get("product_id"),
+        product_id=product_id,
         sort_order=sort_order,
         visible=visible
     )
-    db.session.add(hp)
-    db.session.commit()
-    return jsonify({"success": True, "homepage_id": hp.homepage_id})
+    try:
+        db.session.add(hp)
+        db.session.commit()
+    except IntegrityError as ie:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        current_app.logger.exception("IntegrityError creating HomepageProduct: %s", ie)
+        return jsonify({"error": "integrity_error", "detail": str(ie)}), 400
+    except SQLAlchemyError as e:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        current_app.logger.exception("DB error creating HomepageProduct: %s", e)
+        return jsonify({"error": "database_write_failed", "detail": str(e)}), 500
+
+    return jsonify({"success": True, "homepage_id": hp.homepage_id}), 201
 
 
 @bp.route('/api/homepage-products/<string:homepage_id>', methods=['PUT'])
@@ -592,8 +617,19 @@ def update_homepage_product(homepage_id):
     except Exception:
         # keep existing if parsing fails
         pass
+
+    # If client wants to change product_id, validate existence first
+    if "product_id" in data:
+        new_pid = data.get("product_id")
+        if not new_pid:
+            return jsonify({"error": "product_id_required"}), 400
+        prod = Product.query.filter_by(id=new_pid).first()
+        if not prod:
+            return jsonify({"error": "product_not_found", "product_id": new_pid}), 400
+        hp.product_id = new_pid
+
     hp.section = data.get("section", hp.section)
-    hp.product_id = data.get("product_id", hp.product_id)
+
     # visible may be bool or string
     if "visible" in data:
         v = data.get("visible")
@@ -605,15 +641,21 @@ def update_homepage_product(homepage_id):
             hp.visible = bool(v)
     try:
         db.session.commit()
-    except Exception as e:
-        current_app.logger.exception(
-            "Failed to update homepage product %s: %s", homepage_id, e)
+    except IntegrityError as ie:
         try:
             db.session.rollback()
         except Exception:
             pass
-        return jsonify({"error": "update_failed", "detail": str(e)}), 500
-    return jsonify({"success": True, "homepage_id": hp.homepage_id})
+        current_app.logger.exception("IntegrityError updating HomepageProduct %s: %s", homepage_id, ie)
+        return jsonify({"error": "integrity_error", "detail": str(ie)}), 400
+    except SQLAlchemyError as e:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        current_app.logger.exception("DB error updating HomepageProduct %s: %s", homepage_id, e)
+        return jsonify({"error": "database_write_failed", "detail": str(e)}), 500
+    return jsonify({"success": True, "homepage_id": hp.homepage_id}), 200
 
 
 @bp.route('/api/homepage-products/<string:homepage_id>', methods=['DELETE'])
@@ -624,14 +666,13 @@ def delete_homepage_product(homepage_id):
     try:
         db.session.delete(hp)
         db.session.commit()
-    except Exception as e:
-        current_app.logger.exception(
-            "Failed to delete homepage product %s: %s", homepage_id, e)
+    except SQLAlchemyError as e:
         try:
             db.session.rollback()
         except Exception:
             pass
-        return jsonify({"error": "delete_failed", "detail": str(e)}), 500
+        current_app.logger.exception("DB error deleting HomepageProduct %s: %s", homepage_id, e)
+        return jsonify({"error": "database_delete_failed", "detail": str(e)}), 500
     return jsonify({"success": True})
 
 
