@@ -503,6 +503,34 @@ def get_product_detail(brand, product):
     return jsonify(prod.to_dict())
 
 
+# -------------------------
+# Homepage products helpers / CRUD
+# -------------------------
+def _lookup_homepage_entry(identifier):
+    """
+    Robust lookup for a HomepageProduct entry.
+    Accepts:
+      - numeric homepage_id (primary key)
+      - product_id string (product.id)
+    Returns HomepageProduct instance or None.
+    """
+    if identifier is None:
+        return None
+    # try integer pk first
+    try:
+        pid = int(identifier)
+        hp = HomepageProduct.query.get(pid)
+        if hp:
+            return hp
+    except Exception:
+        pass
+    # fallback: match by product_id (string)
+    try:
+        return HomepageProduct.query.filter_by(product_id=str(identifier)).first()
+    except Exception:
+        return None
+
+
 @bp.route('/api/homepage-products', methods=['GET'])
 def get_homepage_products():
     homepage_products = HomepageProduct.query.order_by(
@@ -532,39 +560,79 @@ def get_homepage_products():
 @bp.route('/api/homepage-products', methods=['POST'])
 def add_homepage_product():
     data = request.json or {}
+    # Accept both 'sort_order' and legacy 'position'
+    sort_val = data.get("sort_order", data.get("position", 0))
+    try:
+        sort_order = int(sort_val)
+    except Exception:
+        sort_order = 0
+    visible_val = data.get("visible", True)
+    visible = bool(visible_val)
     hp = HomepageProduct(
         section=data.get("section"),
         product_id=data.get("product_id"),
-        sort_order=int(data.get("sort_order", 0)),
-        visible=bool(data.get("visible", True))
+        sort_order=sort_order,
+        visible=visible
     )
     db.session.add(hp)
     db.session.commit()
-    return jsonify({"success": True})
+    return jsonify({"success": True, "homepage_id": hp.homepage_id})
 
 
-@bp.route('/api/homepage-products/<int:homepage_id>', methods=['PUT'])
+@bp.route('/api/homepage-products/<string:homepage_id>', methods=['PUT'])
 def update_homepage_product(homepage_id):
-    hp = HomepageProduct.query.filter_by(homepage_id=homepage_id).first()
+    hp = _lookup_homepage_entry(homepage_id)
     if not hp:
         return jsonify({"error": "Homepage product not found"}), 404
     data = request.json or {}
+    # Support both 'sort_order' and legacy 'position'
+    sort_val = data.get("sort_order", data.get("position", hp.sort_order))
+    try:
+        hp.sort_order = int(sort_val)
+    except Exception:
+        # keep existing if parsing fails
+        pass
     hp.section = data.get("section", hp.section)
     hp.product_id = data.get("product_id", hp.product_id)
-    hp.sort_order = int(data.get("sort_order", hp.sort_order))
-    hp.visible = bool(data.get("visible", hp.visible))
-    db.session.commit()
-    return jsonify({"success": True})
+    # visible may be bool or string
+    if "visible" in data:
+        v = data.get("visible")
+        if isinstance(v, bool):
+            hp.visible = v
+        elif isinstance(v, str):
+            hp.visible = v.lower() in ("1", "true", "yes", "on")
+        else:
+            hp.visible = bool(v)
+    try:
+        db.session.commit()
+    except Exception as e:
+        current_app.logger.exception(
+            "Failed to update homepage product %s: %s", homepage_id, e)
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        return jsonify({"error": "update_failed", "detail": str(e)}), 500
+    return jsonify({"success": True, "homepage_id": hp.homepage_id})
 
 
-@bp.route('/api/homepage-products/<int:homepage_id>', methods=['DELETE'])
+@bp.route('/api/homepage-products/<string:homepage_id>', methods=['DELETE'])
 def delete_homepage_product(homepage_id):
-    hp = HomepageProduct.query.filter_by(homepage_id=homepage_id).first()
-    if hp:
+    hp = _lookup_homepage_entry(homepage_id)
+    if not hp:
+        return jsonify({"error": "Homepage product not found"}), 404
+    try:
         db.session.delete(hp)
         db.session.commit()
-        return jsonify({"success": True})
-    return jsonify({"error": "Homepage product not found"}), 404
+    except Exception as e:
+        current_app.logger.exception(
+            "Failed to delete homepage product %s: %s", homepage_id, e)
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        return jsonify({"error": "delete_failed", "detail": str(e)}), 500
+    return jsonify({"success": True})
 
 
 @bp.route('/api/cart/add', methods=['POST'])
