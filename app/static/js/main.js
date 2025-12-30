@@ -1,10 +1,3 @@
-// app/static/js/main.js
-// Full, copy-paste-ready main JavaScript for WPerfumes
-// - Maintains homepage, cart and checkout UI behavior
-// - Uses paypalIntegration (app/static/js/paypal.js) when available and
-//   includes idempotent safeRenderPayPal to avoid duplicate PayPal buttons/icons
-// - Lazy-loads FX rates, handles cart/localStorage, promo codes, and checkout flows
-
 const API = "/api";
 
 const SECTIONS = {
@@ -303,31 +296,60 @@ window.updateCartModalQuantity = function (idx, change) {
     }
 }
 
-// New helper: safeRenderPayPal - uses paypalIntegration and guards container mounted flag
-async function safeRenderPayPal(containerSelector, opts = { currency: 'USD', successUrl: '/' }) {
-    try {
-        const container = (typeof containerSelector === 'string') ? document.querySelector(containerSelector) : containerSelector;
-        if (!container) return;
-        // if already mounted skip
-        if (container.getAttribute && container.getAttribute('data-paypal-mounted') === '1') return;
-        if (window.paypalIntegration && typeof window.paypalIntegration.ensureSdkLoaded === 'function') {
-            await window.paypalIntegration.ensureSdkLoaded();
-            await window.paypalIntegration.renderPayPalButtons(containerSelector, opts);
-        } else if (typeof window.renderPayPalButtons === 'function') {
-            // legacy alias - render but that implementation should also guard
-            window.renderPayPalButtons(containerSelector, opts);
-        } else {
-            // No integration available; do not attempt to load hard-coded SDK here to avoid duplicates.
-            console.warn('PayPal integration not available; PayPal buttons not rendered for', containerSelector);
+// PayPal SDK loader (load on-demand to reduce initial page weight)
+function loadScriptOnce(src, attrs = {}) {
+    return new Promise((resolve, reject) => {
+        if (document.querySelector(`script[data-src="${src}"]`) || document.querySelector(`script[src^="${src.split('?')[0]}"]`)) {
+            return resolve();
         }
-    } catch (e) {
-        console.warn('safeRenderPayPal failed', e);
-    }
+        const s = document.createElement('script');
+        s.src = src;
+        s.async = true;
+        s.setAttribute('data-src', src);
+        Object.keys(attrs).forEach(k => s.setAttribute(k, attrs[k]));
+        s.onload = () => resolve();
+        s.onerror = (e) => reject(e);
+        document.head.appendChild(s);
+    });
 }
 
 function tryRenderModalPayPal(opts = { currency: 'USD', successUrl: '/' }) {
-    // Replace the older approach with the safeRenderPayPal which is idempotent
-    safeRenderPayPal('#modal_paypal_button_container', opts);
+    const containerSelector = '#modal_paypal_button_container';
+    const container = document.querySelector(containerSelector);
+    if (!container) return;
+
+    const renderWhenReady = () => {
+        let tries = 0;
+        const maxTries = 60;
+        const interval = setInterval(() => {
+            tries++;
+            if (typeof window.paypal !== 'undefined' && (typeof window.renderPayPalButtons === 'function' || typeof renderPayPalButtons === 'function')) {
+                try {
+                    if (!container.innerHTML.trim()) {
+                        const helper = (typeof window.renderPayPalButtons === 'function') ? window.renderPayPalButtons : (typeof renderPayPalButtons === 'function' ? renderPayPalButtons : null);
+                        if (helper) {
+                            helper(containerSelector, opts);
+                            container.dataset.paypalRendered = '1';
+                        }
+                    } else {
+                        container.dataset.paypalRendered = '1';
+                    }
+                } finally {
+                    clearInterval(interval);
+                }
+            } else if (tries >= maxTries) {
+                clearInterval(interval);
+            }
+        }, 100);
+    };
+
+    if (typeof window.paypal === 'undefined') {
+        const clientId = 'AfTRhyp1ftl9u6Cy6Tz6HT8bLlnH3YKaoLgLkw6xLAJkEtOz-dCKVzmyVqwVHZ2uCU6Jrm6zV3L8C06f';
+        const src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=${opts.currency}`;
+        loadScriptOnce(src).then(renderWhenReady).catch(err => console.warn('PayPal SDK failed to load', err));
+    } else {
+        renderWhenReady();
+    }
 }
 
 function showCheckoutModal() {
@@ -671,7 +693,7 @@ function showProductDetailOverlay(card, brand, title) {
 
 function hideProductDetailOverlay() {
     const overlay = document.getElementById('productDetailOverlay');
-    if (overlay) overlay.style.display = 'none';
+    if (overlay) overlay.style.display = "none";
 }
 
 function attachProductCardListeners() {
@@ -806,43 +828,18 @@ document.addEventListener('DOMContentLoaded', function () {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
-                            customer_name: customer,
-                            customer_email: email,
-                            customer_phone: phone,
-                            customer_address: address,
-                            product_id: item.id || item.product_id || '',
-                            product_title: item.title || item.name || '',
-                            quantity: item.qty || item.quantity || 1,
+                            customer, email, phone, address,
+                            product: item.title,
+                            qty: item.qty || item.quantity || 1,
                             status: "Pending",
                             payment_method,
-                            promo_code: appliedPromo || undefined,
-                            date: new Date().toISOString().slice(0, 19).replace('T', ' ')
+                            promo_code: appliedPromo || undefined
                         })
                     });
-
-                    if (!res.ok) {
-                        // Read server response to surface details for debugging
-                        let errText = "";
-                        try {
-                            const js = await res.json().catch(() => null);
-                            if (js && typeof js === 'object') {
-                                // prefer detailed fields if present
-                                if (js.detail) errText = typeof js.detail === 'string' ? js.detail : JSON.stringify(js.detail);
-                                else errText = JSON.stringify(js);
-                            } else {
-                                errText = await res.text().catch(() => res.statusText || `HTTP ${res.status}`);
-                            }
-                        } catch (readErr) {
-                            errText = res.statusText || `HTTP ${res.status}`;
-                        }
-                        throw new Error(`Order placement failed: ${res.status} ${errText}`);
-                    }
+                    if (!res.ok) throw new Error('Order placement failed');
                 } catch (error) {
                     anyFailed = true;
-                    if (msgDiv) {
-                        // include server-provided details when available
-                        msgDiv.innerHTML += `<div class="error-msg">Network error: Failed to place order for ${item.title}.<br><small style="color:#666">${(error && error.message) ? error.message : ''}</small></div>`;
-                    }
+                    if (msgDiv) msgDiv.innerHTML += `<div class="error-msg">Network error: Failed to place order for ${item.title}.</div>`;
                     console.warn('order submission error', error);
                 }
             }
@@ -858,7 +855,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     promoDiscountValue = 0;
                     promoDiscountType = null;
                     saveCart();
-                    renderCartModal();
+                    renderCheckoutView();
                     updateCartCount();
                     if (orderForm) orderForm.reset();
                     const promoInput = document.getElementById('promoInput');
@@ -897,38 +894,16 @@ document.addEventListener('DOMContentLoaded', function () {
             }));
             try { localStorage.setItem('paypal_items', JSON.stringify(itemsForServer)); } catch (e) { }
 
-            // Prefer paypalIntegration API (defined in static/js/paypal.js). If not present, fallback.
-            if (window.paypalIntegration && typeof window.paypalIntegration.initiateCardCheckout === 'function') {
-                try {
-                    await window.paypalIntegration.initiateCardCheckout(itemsForServer, { currency: 'USD', returnUrl: window.location.origin + '/paypal/return' });
-                    // If redirect occurs, code below won't run.
-                } catch (err) {
-                    console.error('Buy Now (card) initiation failed', err);
-                    const orderMsg = document.getElementById('orderMsg');
-                    const detail = (err && err.message) ? err.message : String(err);
-                    if (orderMsg) {
-                        if (detail.toLowerCase().includes('401') || detail.toLowerCase().includes('unauthorized')) {
-                            orderMsg.innerHTML = `<div style="color:#e74c3c;font-weight:700;">Payment provider credentials appear missing or invalid on the server.</div>
-                            <div style="color:#666;margin-top:8px;">Please ensure PAYPAL_CLIENT_ID and PAYPAL_SECRET are set as environment variables on the server (use sandbox values for development), and restart the application.</div>
-                            <div style="color:#666;margin-top:8px;font-size:0.9em;">Server error details: ${detail}</div>`;
-                        } else {
-                            orderMsg.innerHTML = `<div style="color:#e74c3c;font-weight:700;">Failed to initiate payment. ${detail}</div>`;
-                        }
-                    }
-                    togglePaymentButtons();
-                }
-            } else if (typeof window.initiateCardCheckout === 'function') {
-                // legacy alias
+            if (typeof window.initiateCardCheckout === 'function') {
                 try {
                     await window.initiateCardCheckout(itemsForServer, { currency: 'USD', returnUrl: window.location.origin + '/paypal/return' });
                 } catch (err) {
-                    console.error('Buy Now (legacy) initiation failed', err);
+                    console.error('Buy Now (card) initiation failed', err);
                     const orderMsg = document.getElementById('orderMsg');
                     if (orderMsg) orderMsg.innerHTML = '<div style="color:#e74c3c;">Failed to initiate payment. Please try again.</div>';
                     togglePaymentButtons();
                 }
             } else {
-                // No PayPal integration available: fallback to local order-confirmation flow
                 const orderTotal = getDiscountedTotal();
                 hideCheckoutModal();
                 showOrderConfirmation(orderTotal);
@@ -976,35 +951,16 @@ document.addEventListener('DOMContentLoaded', function () {
             }));
             try { localStorage.setItem('paypal_items', JSON.stringify(itemsForServer)); } catch (e) { }
 
-            if (window.paypalIntegration && typeof window.paypalIntegration.initiateCardCheckout === 'function') {
-                try {
-                    await window.paypalIntegration.initiateCardCheckout(itemsForServer, { currency: 'USD', returnUrl: window.location.origin + '/paypal/return' });
-                } catch (err) {
-                    console.error('Modal Buy Now (card) initiation failed', err);
-                    const orderMsg = document.getElementById('modalOrderMsg');
-                    const detail = (err && err.message) ? err.message : String(err);
-                    if (orderMsg) {
-                        if (detail.toLowerCase().includes('401') || detail.toLowerCase().includes('unauthorized')) {
-                            orderMsg.innerHTML = `<div style="color:#e74c3c;font-weight:700;">Payment provider credentials appear missing or invalid on the server.</div>
-                            <div style="color:#666;margin-top:8px;">Please ensure PAYPAL_CLIENT_ID and PAYPAL_SECRET are set as environment variables on the server (use sandbox values for development), and restart the application.</div>
-                            <div style="color:#666;margin-top:8px;font-size:0.9em;">Server error details: ${detail}</div>`;
-                        } else {
-                            orderMsg.innerHTML = `<div style="color:#e74c3c;font-weight:700;">Failed to start card (PayPal) checkout.</div><div style="color:#666;margin-top:8px;font-size:0.9em;">${detail}</div>`;
-                        }
-                    }
-                    updateModalPaymentButtonsState();
-                }
-            } else if (typeof window.initiateCardCheckout === 'function') {
+            if (typeof window.initiateCardCheckout === 'function') {
                 try {
                     await window.initiateCardCheckout(itemsForServer, { currency: 'USD', returnUrl: window.location.origin + '/paypal/return' });
                 } catch (err) {
-                    console.error('Modal Buy Now (legacy) initiation failed', err);
+                    console.error('Modal Buy Now (card) initiation failed', err);
                     const orderMsg = document.getElementById('modalOrderMsg');
                     if (orderMsg) orderMsg.innerHTML = '<div style="color:#e74c3c;">Failed to initiate payment. Please try again.</div>';
                     updateModalPaymentButtonsState();
                 }
             } else {
-                // fallback: local confirmation if PayPal not available
                 const orderTotal = getDiscountedTotal();
                 const modalOrderForm = document.getElementById('modalOrderForm');
                 if (modalOrderForm) modalOrderForm.reset();
@@ -1047,27 +1003,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (document.getElementById('cartSection')) renderCheckoutView();
     });
 
-    try {
-        const heroAudio = document.getElementById('heroAudio');
-        const muteBtn = document.getElementById('heroAudioMuteBtn');
-        const muteIcon = document.getElementById('heroAudioMuteIcon');
-
-        function updateMuteIcon() {
-            if (!muteIcon || !heroAudio) return;
-            muteIcon.textContent = heroAudio.muted ? '🔇' : '🔊';
-        }
-
-        if (muteBtn && heroAudio) {
-            muteBtn.addEventListener('click', function () {
-                heroAudio.muted = !heroAudio.muted;
-                updateMuteIcon();
-            });
-            updateMuteIcon();
-        }
-    } catch (err) {
-        console.warn('Hero audio init failed', err);
-    }
-
     tryRenderModalPayPal({ currency: 'USD', successUrl: '/' });
 });
 
@@ -1085,5 +1020,4 @@ if (typeof window !== 'undefined') {
     window.hideCartModal = window.hideCartModal || hideCartModal;
     window.renderCartModal = window.renderCartModal || renderCartModal;
     window.renderCheckoutView = window.renderCheckoutView || renderCheckoutView;
-    window.saveCart = window.saveCart || saveCart;
 }
