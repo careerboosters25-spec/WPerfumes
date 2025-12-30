@@ -27,3 +27,4 @@ backup_old_dsn/
 *.bak
 instance/config.py
 logs/
+koyeb-secrets.env
