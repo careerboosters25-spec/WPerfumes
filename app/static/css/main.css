@@ -56,10 +56,7 @@ footer {
     width: 100%;
 }
 
-/* Announcement bar: keep the element sticky across the viewport
-   but constrain the visual band to the same centered max-width as other sections.
-   This implementation does NOT require changing the HTML.
-*/
+
 #announcement {
     background: transparent;
     color: var(--primary-white);
@@ -171,12 +168,7 @@ footer {
     }
 }
 
-/* NAVBAR
-   Adjust spacing and sizing so the whole nav fits on one horizontal line:
-   - reduce paddings and gaps
-   - prevent nav-tabs from wrapping
-   - make the center search smaller and fixed
-*/
+
 .navbar {
     background-color: var(--light-brown);
     padding: 6px 8px;
@@ -246,9 +238,7 @@ footer {
     color: var(--dark-accent);
 }
 
-/* Center search -- reduce size and fix width to keep layout stable.
-   The inline style in index.html sets a larger width; we use !important to ensure this stylesheet wins.
-*/
+
 .navbar-center {
     flex: 0 0 160px;
     /* reduced from 200px to create more room on the right */

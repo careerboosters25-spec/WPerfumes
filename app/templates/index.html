@@ -1,3 +1,7 @@
+<!-- Updated index.html: moved Country / City selectors into the checkout modal form (replaced the Shipping Address textarea)
+     Ensures modal contains #countrySelect, #citySelectContainer, #manualCountryCity, #countryInput, #cityInput so checkout.js can wire them.
+     Delivery providers remain in the modal; promo/hidden inputs kept.
+-->
 <!DOCTYPE html>
 <html lang="en">
 
@@ -16,8 +20,8 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-o9N1j8bM0g6IVT+gq4kZpM3b6rY2v6b7qf+3yg7P6u0=" crossorigin="" />
 
-    <!-- Hero audio small stylesheet -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/hero-audio.css') }}">
+    <!-- Checkout styles (needed so delivery provider cards display in homepage modal) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/delivery.css') }}">
 
     <!-- Note: footer.css moved into footer partial (templates/footer.html) so it's not included here to avoid duplication. -->
 
@@ -53,34 +57,6 @@
             .navbar-center .search-container input#siteSearchInput {
                 width: 48vw;
                 max-width: 220px;
-            }
-        }
-
-        /* Modal small layout helpers used for inline checkout modal */
-        .checkout-row {
-            display: flex;
-            gap: 10px;
-            align-items: flex-start;
-        }
-
-        .checkout-row .form-group {
-            flex: 1 1 0;
-            margin: 0;
-        }
-
-        /* tighten spacing for the modal so it takes less vertical space */
-        #checkoutModalContent .form-group {
-            margin-bottom: 8px;
-        }
-
-        /* On small screens stack country/city */
-        @media (max-width: 720px) {
-            .checkout-row {
-                display: block;
-            }
-
-            .checkout-row .form-group {
-                margin-top: 8px;
             }
         }
     </style>
@@ -155,18 +131,6 @@
         <div class="container">
             <div class="hero-scaling-wrapper">
                 <div class="hero-inner">
-                    <div id="hero-audio-player">
-                        <button id="heroAudioMuteBtn" class="hero-audio-btn" aria-pressed="false"
-                            aria-label="Mute/unmute hero audio" title="Mute/unmute audio">
-                            <span id="heroAudioMuteIcon">🔈</span>
-                        </button>
-                        <audio id="heroAudio" loop preload="auto" playsinline>
-                            <source src="{{ url_for('static', filename='audio/hero.mp3') }}" type="audio/mpeg">
-                            Your browser does not support the audio element.
-                        </audio>
-                        <span id="heroAudioStatus" class="hero-audio-status" aria-live="polite"
-                            style="display:none;"></span>
-                    </div>
                     <h2>Handpicked Luxury Fragrances</h2>
                     <p>Explore our carefully curated collection of signature and designer scents — free delivery over
                         $100.</p>
@@ -228,21 +192,30 @@
         </div>
     </div>
 
-    <!-- UPDATED checkout modal: country and city side-by-side to reduce vertical length -->
     <div id="checkoutModalBg" class="cart-modal-bg" aria-hidden="true">
         <div id="checkoutModalContent" role="dialog" aria-modal="true" aria-label="Checkout">
             <button id="checkoutModalCloseBtn" aria-label="Close checkout">✕</button>
             <h2>Checkout</h2>
+            <div id="checkoutDiscountInfo" class="discount-info" style="display:none;"></div>
 
-            <!-- Promo: replaced free-text with promo select (checkout.js expects promo_code_summary) -->
             <div id="promoWrapper" style="margin-top:12px;">
-                <label for="promo_code_summary">Promo code</label>
-                <select id="promo_code_summary" name="promo_code_summary"
-                    style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd;">
-                    <option value="">-- None --</option>
-                </select>
-                <input type="hidden" id="promo_code_hidden" name="promo_code" value="">
+                <label for="promoInput">Promo code</label>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <input id="promoInput" type="text" placeholder="Enter promo code"
+                        style="flex:1;padding:8px;border:1px solid #ddd;border-radius:6px;">
+                    <button id="applyPromoBtn" type="button"
+                        style="padding:8px 10px;border-radius:6px;border:none;background:#2d8f7c;color:white;cursor:pointer;">Apply</button>
+                </div>
                 <div id="promoMsg" style="margin-top:8px;color:#666;font-size:0.95em;"></div>
+            </div>
+
+            <!-- Delivery providers for the modal (so homepage modal shows same providers) -->
+            <input type="hidden" id="selectedDeliveryIdModal" name="delivery_option" value="">
+            <div id="deliveryProvidersSectionModal" style="margin-top:12px;">
+                <label style="font-weight:700;margin-bottom:6px;display:block;">Delivery Options</label>
+                <div id="deliveryProvidersModal" class="delivery-providers" aria-live="polite" role="list"></div>
+                <div class="small-muted" style="margin-top:8px;">Click a provider to visit their site. Choose an option
+                    to update the delivery fee which will be applied to the order total.</div>
             </div>
 
             <div id="cartSection" aria-live="polite"></div>
@@ -251,14 +224,12 @@
 
             <div id="paymentSelectWrapper" style="display:block;margin-top:12px;">
                 <label class="payment-dropdown-label">Select Payment Method</label>
-                <!-- keep id=paymentSelect which checkout.js expects -->
                 <select id="paymentSelect" class="payment-select">
                     <option>Cash on Delivery</option>
                     <option>Visa/Mastercard</option>
                 </select>
             </div>
 
-            <!-- Order form: IDs aligned with checkout.js -->
             <form id="orderForm" style="margin-top:12px;">
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
                     <input id="customer" name="customer" type="text" placeholder="Full name" required
@@ -271,50 +242,44 @@
                         style="padding:8px;border:1px solid #ddd;border-radius:6px;">
                 </div>
 
+                <!-- REPLACED: Shipping address textarea removed.
+                     Country / City selectors moved into this space (they replace the address field). -->
                 <div style="margin-top:10px;">
-                    <textarea id="address" name="address" rows="3" placeholder="Shipping address" required
-                        style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;"></textarea>
-                </div>
-
-                <!-- Country / City fields arranged horizontally to reduce vertical space -->
-                <div style="margin-top:10px;">
-                    <div class="checkout-row">
-                        <div class="form-group">
-                            <label for="countrySelect">Country</label>
-                            <select id="countrySelect" name="country"
-                                style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd;">
-                                <option value="">-- Select a country (or leave blank to enter manually) --</option>
-                                <option value="Bahrain">Bahrain</option>
-                                <option value="Egypt">Egypt</option>
-                                <option value="Kuwait">Kuwait</option>
-                                <option value="Qatar">Qatar</option>
-                                <option value="Saudi Arabia">Saudi Arabia</option>
-                                <option value="UAE">UAE</option>
-                                <option value="OTHER">Other (enter manually)</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group" id="citySelectContainer" aria-hidden="true" style="display:none;">
-                            <label for="citySelect">City</label>
-                            <select id="citySelect" name="city"
-                                style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd;">
-                                <option value="">-- Select city --</option>
-                            </select>
-                        </div>
+                    <div class="form-group">
+                        <label for="countrySelect">Country</label>
+                        <select id="countrySelect" name="country">
+                            <option value="">-- Select a country (or leave blank to enter manually) --</option>
+                            <option value="Bahrain">Bahrain</option>
+                            <option value="Egypt">Egypt</option>
+                            <option value="Kuwait">Kuwait</option>
+                            <option value="Qatar">Qatar</option>
+                            <option value="Saudi Arabia">Saudi Arabia</option>
+                            <option value="UAE">UAE</option>
+                            <option value="OTHER">Other (enter manually)</option>
+                        </select>
+                        <div class="small-muted" style="margin-top:6px;">If you don't select a country you can enter it
+                            manually below.</div>
                     </div>
 
-                    <div id="manualCountryCity" class="form-group" style="display:none;margin-top:8px;">
+                    <div class="form-group" id="citySelectContainer" aria-hidden="true" style="display:none;">
+                        <label for="citySelect">City</label>
+                        <select id="citySelect" name="city">
+                            <option value="">-- Select city --</option>
+                        </select>
+                    </div>
+
+                    <div id="manualCountryCity" class="form-group" style="display:none;">
                         <label for="countryInput">Country (manual)</label>
-                        <input id="countryInput" name="country_manual" type="text" placeholder="Enter country"
-                            style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd;" />
+                        <input id="countryInput" name="country_manual" type="text" placeholder="Enter country" />
 
                         <label for="cityInput" style="margin-top:8px;display:block;">City (manual)</label>
-                        <input id="cityInput" name="city_manual" type="text" placeholder="Enter city"
-                            style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd;" />
+                        <input id="cityInput" name="city_manual" type="text" placeholder="Enter city" />
                         <div class="small-muted" style="margin-top:6px;">Use these fields if you prefer to type the
                             country and city.</div>
                     </div>
                 </div>
+
+                <input type="hidden" id="promo_code_hidden" name="promo_code" value="">
 
                 <div id="orderMsg" style="margin-top:10px;"></div>
                 <div class="form-buttons" style="margin-top:12px;">
@@ -359,11 +324,21 @@
         async></script>
     <script src="{{ url_for('static', filename='js/paypal.js') }}"></script>
 
-    <!-- Ensure checkout.js is included so modal gets the same wiring as /checkout -->
+    <!-- Checkout page logic (also used to render delivery providers into modal on the homepage) -->
     <script src="{{ url_for('static', filename='js/checkout.js') }}"></script>
 
-    <script src="{{ url_for('static', filename='js/hero-audio.js') }}"></script>
     <script src="{{ url_for('static', filename='js/hero-enhance.js') }}"></script>
+
+    <script>
+        // If checkout.js exported utilities, trigger an init to ensure modal wiring occurs.
+        document.addEventListener('DOMContentLoaded', function () {
+            try {
+                if (window.__checkout && typeof window.__checkout.initCheckoutModal === 'function') {
+                    window.__checkout.initCheckoutModal();
+                }
+            } catch (e) { /* ignore */ }
+        });
+    </script>
 
 </body>
 

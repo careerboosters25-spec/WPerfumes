@@ -76,6 +76,7 @@
                     <!-- /COUNTRY / CITY fields -->
 
                     <input type="hidden" id="promo_code_hidden" name="promo_code" value="">
+                    <input type="hidden" id="selectedDeliveryId" name="delivery_option" value="">
 
                     <div class="form-group">
                         <label for="paymentSelect">Select Payment Method</label>
@@ -116,6 +117,16 @@
                 </div>
 
                 <div id="cartSummarySection" aria-live="polite"></div>
+
+                <!-- Delivery providers / options -->
+                <div id="deliveryProvidersSection" style="margin-top:12px;">
+                    <label style="font-weight:700;margin-bottom:6px;display:block;">Delivery Options</label>
+                    <div id="deliveryProviders" class="delivery-providers" aria-live="polite" role="list"></div>
+                    <div id="deliveryNote" class="small-muted" style="margin-top:8px;">Click a provider to visit their
+                        site. Choose an option to update the delivery fee which will be applied to the order total.
+                    </div>
+                </div>
+
                 <div style="margin-top:12px;">
                     <div class="small-muted">Payment on delivery available for eligible addresses.</div>
                 </div>

@@ -1,3 +1,5 @@
+/* Updated: delivery option cards vertical height reduced to ~50% (padding, image height, spacing reduced) */
+
 body {
     font-family: Arial, sans-serif;
     margin: 0;
@@ -156,6 +158,99 @@ textarea {
     margin-top: 4px;
 }
 
+/* Delivery providers styles (vertical height reduced ~50%) */
+.delivery-providers {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 4px 2px;
+    align-items: stretch;
+}
+
+.delivery-card {
+    min-width: 60px;
+    /* keep width; user requested vertical height halved */
+    max-width: 140px;
+    background: #fff;
+    border: 1px solid #e6e6e6;
+    border-radius: 8px;
+    padding: 3px;
+    /* reduced from 6px */
+    display: flex;
+    gap: 4px;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    cursor: pointer;
+    transition: box-shadow 140ms ease, transform 140ms ease, border-color 140ms ease;
+    flex: 0 0 auto;
+    /* limit the card max-height so overall vertical size remains small */
+    max-height: 70px;
+    box-sizing: border-box;
+}
+
+.delivery-card img {
+    width: 48px;
+    /* modest width retained for recognition */
+    height: 14px;
+    /* reduced from 40px -> smaller vertical footprint */
+    object-fit: contain;
+    background: #fff;
+    display: block;
+    margin-top: 2px;
+}
+
+.delivery-card .provider-name {
+    font-weight: 700;
+    font-size: 11px;
+    /* slightly smaller */
+    margin-top: 4px;
+    /* reduced */
+    line-height: 1.0;
+}
+
+.delivery-card .delivery-label {
+    font-size: 10px;
+    /* reduced */
+    color: #666;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.delivery-card .fee {
+    font-weight: 700;
+    color: #27ae60;
+    margin-top: 4px;
+    font-size: 11px;
+}
+
+.delivery-card:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    transform: translateY(-4px);
+    border-color: #d1d1d1;
+}
+
+.delivery-card.active {
+    border-color: #2d8f7c;
+    box-shadow: 0 10px 30px rgba(45, 143, 124, 0.12);
+    transform: translateY(-2px);
+}
+
+/* radio positioned at top-right of card */
+.delivery-card .choose {
+    position: relative;
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.delivery-card input[type="radio"] {
+    transform: scale(1.05);
+}
+
 /* responsive */
 @media (max-width: 900px) {
     .grid {
@@ -165,5 +260,15 @@ textarea {
     .container {
         margin: 16px;
         padding: 14px;
+    }
+
+    .delivery-providers {
+        gap: 6px;
+    }
+
+    .delivery-card {
+        min-width: 55px;
+        max-width: 120px;
+        max-height: 64px;
     }
 }
