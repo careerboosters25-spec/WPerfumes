@@ -191,6 +191,17 @@ def brands():
     return render_template('brands.html', brands=brands_list)
 
 
+@bp.route('/brands.html')
+def brands_html():
+    """
+    Backwards-compatible route so requests to /brands.html render the same brands.html page.
+    Reuses the same logic as /brands by calling the brands() view.
+    This ensures links or static-style references to /brands.html (from legacy templates)
+    work correctly without 404s.
+    """
+    return brands()
+
+
 @bp.route('/brand')
 def brand():
     return render_template('brand.html')
@@ -383,7 +394,7 @@ def update_product(id):
         try:
             prod.quantity = int(data.get("quantity", prod.quantity))
         except Exception:
-            # keep existing quantity on parse failure
+            # keep existing if parse fails
             pass
     prod.tags = data.get("tags", prod.tags)
 
