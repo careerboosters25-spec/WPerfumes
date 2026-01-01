@@ -1,0 +1,294 @@
+#hero .hero-inner,
+#hero .hero-scaling-wrapper,
+#hero .hero-inner>* {
+    border-radius: 14px;
+    /* smooth rounded corners */
+    overflow: hidden;
+    /* ensure children respect radius */
+    background-clip: padding-box;
+}
+
+/* subtle elevation without changing background color */
+#hero .hero-inner {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+    padding: 22px;
+    /* keep spacing; tweak if needed */
+    color: inherit;
+    /* don't force text color here */
+}
+
+/* responsive hero adjustments */
+@media (max-width: 640px) {
+
+    #hero .hero-inner,
+    #hero .hero-scaling-wrapper {
+        border-radius: 10px;
+        padding: 14px;
+    }
+}
+
+/* ---------------------------
+   Delivery provider cards
+   Compact vertical footprint suitable for modal display.
+   --------------------------- */
+.delivery-providers {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 6px 4px;
+    align-items: center;
+    -webkit-overflow-scrolling: touch;
+}
+
+.delivery-providers[role="list"] {
+    /* ensure semantic list containers behave consistently */
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+/* card */
+.delivery-card {
+    min-width: 72px;
+    max-width: 140px;
+    background: #ffffff;
+    border: 1px solid #e6e6e6;
+    border-radius: 10px;
+    padding: 6px 6px 6px 6px;
+    /* compact padding to reduce vertical height */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    cursor: pointer;
+    transition: box-shadow 160ms ease, transform 160ms ease, border-color 160ms ease;
+    flex: 0 0 auto;
+    max-height: 74px;
+    /* strongly limit vertical footprint */
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+/* provider logo */
+.delivery-card img {
+    width: 52px;
+    height: 14px;
+    object-fit: contain;
+    display: block;
+    margin-top: 2px;
+    background: transparent;
+}
+
+/* text */
+.delivery-card .provider-name {
+    font-weight: 700;
+    font-size: 11px;
+    margin-top: 4px;
+    line-height: 1.0;
+    color: #222;
+}
+
+.delivery-card .delivery-label {
+    font-size: 10px;
+    color: #666;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.delivery-card .fee {
+    font-weight: 700;
+    color: #27ae60;
+    margin-top: 4px;
+    font-size: 11px;
+}
+
+/* hover / active */
+.delivery-card:hover {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    transform: translateY(-4px);
+    border-color: #d1d1d1;
+}
+
+.delivery-card.active {
+    border-color: #2d8f7c;
+    box-shadow: 0 12px 34px rgba(45, 143, 124, 0.12);
+    transform: translateY(-2px);
+}
+
+/* radio alignment (top-right) */
+.delivery-card .choose {
+    position: relative;
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: -6px;
+    /* pull radio into top area without adding vertical space */
+}
+
+.delivery-card input[type="radio"] {
+    transform: scale(1.02);
+    -webkit-transform: scale(1.02);
+}
+
+/* keyboard focus */
+.delivery-card:focus {
+    outline: 3px solid rgba(45, 143, 124, 0.12);
+    outline-offset: 2px;
+}
+
+/* ---------------------------
+   Compact inline totals (modal)
+   Show Subtotal / Discount(s) / Delivery / Total as a clear table-like grid
+   --------------------------- */
+
+/* Use grid so each totals-item is a column with consistent separators */
+.totals-inline {
+    width: 100%;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(120px, 1fr);
+    align-items: center;
+    gap: 0;
+    padding: 6px 0;
+    margin-top: 8px;
+    border-top: 1px solid #ececec;
+    /* clear horizontal separator above */
+    border-bottom: 1px solid #ececec;
+    /* clear horizontal separator below */
+    background: #fff;
+    overflow-x: auto;
+    /* allow horizontal scroll on very small screens */
+    box-sizing: border-box;
+}
+
+/* Each column cell */
+.totals-inline .totals-item {
+    padding: 10px 14px;
+    box-sizing: border-box;
+    text-align: center;
+    /* center labels and amounts */
+    border-right: 1px solid #f0f0f0;
+    /* vertical grid line between columns */
+    min-width: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Remove right border on last visible child */
+.totals-inline .totals-item:last-child {
+    border-right: none;
+}
+
+/* Label (e.g. "Subtotal", "Auto Discount") */
+.totals-inline .totals-item .small-muted,
+.totals-inline .totals-item>div:first-child {
+    font-size: 0.92em;
+    color: #666;
+    margin-bottom: 6px;
+}
+
+/* Numeric amount line(s) (supports both .amount class and generic second div structure) */
+.totals-inline .totals-item>div:last-child,
+.totals-inline .totals-item .amount {
+    font-weight: 700;
+    color: #222;
+    font-size: 1.03em;
+    line-height: 1.05;
+    text-align: center;
+}
+
+/* USD approx (smaller, muted) */
+.totals-inline .totals-item .small-muted.inline-approx,
+.totals-inline .totals-item>div:last-child .small-muted {
+    display: block;
+    font-weight: 400;
+    color: #888;
+    margin-top: 4px;
+    font-size: 0.88em;
+}
+
+/* Emphasize discount and delivery with existing colors */
+.totals-inline .totals-item.discount>div:last-child,
+.totals-inline .totals-item .discount .amount {
+    color: #b8860b;
+}
+
+.totals-inline .totals-item.delivery>div:last-child,
+.totals-inline .totals-item .delivery .amount {
+    color: #27ae60;
+}
+
+/* Highlight the final total column */
+.totals-inline .totals-item.total {
+    border-left: 1px solid #e6e6e6;
+    /* visually separate final total column */
+    padding-left: 18px;
+    margin-left: 8px;
+}
+
+.totals-inline .totals-item.total>div:last-child,
+.totals-inline .totals-item.total .amount {
+    color: #27ae60;
+    font-weight: 900;
+    font-size: 1.12em;
+}
+
+/* Make focus visible for keyboard users */
+.totals-inline .totals-item:focus {
+    outline: 3px solid rgba(45, 143, 124, 0.12);
+    outline-offset: -3px;
+}
+
+/* Small screens: reduce padding and sizes so columns fit better */
+@media (max-width: 520px) {
+    .totals-inline {
+        grid-auto-columns: minmax(96px, 1fr);
+    }
+
+    .totals-inline .totals-item {
+        padding: 8px 10px;
+    }
+
+    .totals-inline .totals-item .small-muted,
+    .totals-inline .totals-item>div:first-child {
+        font-size: 0.86em;
+    }
+
+    .totals-inline .totals-item>div:last-child,
+    .totals-inline .totals-item .amount {
+        font-size: 0.98em;
+    }
+}
+
+/* ---------------------------
+   Minor helpers & fallbacks
+   --------------------------- */
+
+/* ensure modal cart containers break long words gracefully */
+#cartSection,
+#cartSummarySection {
+    word-wrap: break-word;
+}
+
+/* when delivery provider container is empty, show a small hint */
+.delivery-providers:empty::before {
+    content: "No delivery options available";
+    color: #666;
+    font-size: 0.95em;
+    padding: 6px;
+}
+
+/* keep delivery styles scoped and avoid changing global fonts/colors */
+.delivery-providers,
+.delivery-card,
+.totals-inline {
+    font-family: inherit;
+    color: inherit;
+}
+
+/* End of delivery.css */
