@@ -1,0 +1,2 @@
+app/models.py:23:class Product(db.Model):
+app/models.py:126:class ProductCode(db.Model):

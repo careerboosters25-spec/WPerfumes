@@ -1,0 +1,1 @@
+app/models.py:7:class Brand(db.Model):

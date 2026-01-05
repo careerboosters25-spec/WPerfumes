@@ -1,0 +1,8 @@
+=== media & static checks ===
+media/ not present
+total 8
+drwxr-xr-x 1 Makori 197121 0 Dec 25 07:48 ./
+drwxr-xr-x 1 Makori 197121 0 Jan  5 12:26 ../
+drwxr-xr-x 1 Makori 197121 0 Dec 25 07:48 css/
+drwxr-xr-x 1 Makori 197121 0 Dec 25 07:48 js/
+uploads/ not present

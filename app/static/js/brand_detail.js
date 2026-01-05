@@ -1,11 +1,15 @@
 /* brand_detail.js
-   Payment UI and PayPal rendering removed from this file per request.
-   This file now focuses on product loading, adding items to cart and opening the shared checkout modal.
+   Removed all Add-to-Cart and cart-related code per request.
+   - Cart/localStorage functions and UI (cart panel, badges, notifications) removed.
+   - addProductObjectToCart and attachAddToCartHandlers removed.
+   - Suggestion cards no longer include "Add to Cart" buttons (Buy Now still disabled).
+   - Kept Likes, product loading, thumbnails, suggestion rendering (without Add-to-Cart).
 */
 
 document.addEventListener('DOMContentLoaded', function () {
     const API = "/api";
     const PLACEHOLDER_IMG = document.body && document.body.dataset && document.body.dataset.placeholder ? document.body.dataset.placeholder : '/static/images/placeholder.jpg';
+    const LIKES_KEY = 'likes';
 
     // Utility: normalize image paths returned by the backend
     function toStaticUrl(url) {
@@ -17,16 +21,148 @@ document.addEventListener('DOMContentLoaded', function () {
         return `/static/${url}`;
     }
 
-    // Utility: safely read URL param
-    function safeParam(name) {
+    // --------------------
+    // Likes (localStorage)
+    // --------------------
+    function getLikes() {
         try {
-            return decodeURIComponent(new URLSearchParams(window.location.search).get(name) || '');
+            const raw = localStorage.getItem(LIKES_KEY) || '[]';
+            return JSON.parse(raw);
         } catch (e) {
-            return '';
+            return [];
         }
     }
+    function saveLikes(arr) {
+        try {
+            localStorage.setItem(LIKES_KEY, JSON.stringify(arr || []));
+        } catch (e) { /* ignore */ }
+    }
+    function findLikeIndexById(arr, id) {
+        return arr.findIndex(i => ('' + i.id) === ('' + id));
+    }
+    function isLiked(id) {
+        if (!id) return false;
+        const arr = getLikes();
+        return findLikeIndexById(arr, id) >= 0;
+    }
+    function likeObjectForProduct(prod) {
+        if (!prod) return null;
+        const id = prod.id || prod.product_id || prod._id || prod.title || (new Date().getTime());
+        return {
+            id: id,
+            title: prod.title || prod.name || (document.getElementById('productName') ? document.getElementById('productName').textContent : 'Product'),
+            brand: prod.brand || (document.getElementById('brandName') ? document.getElementById('brandName').textContent : ''),
+            price: Number(prod.price || prod.unit_price || prod.amount || 0) || 0,
+            image: prod.image || prod.image_url || (document.getElementById('productImage') ? document.getElementById('productImage').src : '')
+        };
+    }
+    function toggleLikeProduct(prod) {
+        if (!prod) return false;
+        const obj = likeObjectForProduct(prod);
+        if (!obj) return false;
+        const arr = getLikes();
+        const idx = findLikeIndexById(arr, obj.id);
+        let added = false;
+        if (idx >= 0) {
+            arr.splice(idx, 1);
+            added = false;
+        } else {
+            arr.unshift(obj);
+            added = true;
+        }
+        saveLikes(arr);
+        updateLikesBadge();
+        renderLikesPanelContents();
+        return added;
+    }
+    function updateLikesBadge() {
+        try {
+            const badge = document.getElementById('likesCountBadge');
+            if (!badge) return;
+            const count = getLikes().length || 0;
+            if (count > 0) {
+                badge.style.display = 'inline-flex';
+                badge.textContent = String(count);
+            } else {
+                badge.style.display = 'none';
+            }
+        } catch (e) { /* ignore */ }
+    }
 
-    // Load similar products (simple approach)
+    // Renders the likes panel contents (nav dropdown)
+    function renderLikesPanelContents() {
+        try {
+            const likesPanel = document.getElementById('likesPanel');
+            if (!likesPanel) return;
+            const list = getLikes();
+            if (!list || list.length === 0) {
+                likesPanel.innerHTML = '<div style="padding:10px;color:#666;">No likes yet.</div>';
+                return;
+            }
+            likesPanel.innerHTML = '';
+            list.forEach(item => {
+                const row = document.createElement('div');
+                row.className = 'like-row';
+                const img = document.createElement('img');
+                img.src = toStaticUrl(item.image || PLACEHOLDER_IMG);
+                img.alt = item.title || 'Liked product';
+                const meta = document.createElement('div');
+                meta.className = 'meta';
+                const t = document.createElement('div');
+                t.className = 'title';
+                t.textContent = item.title || '';
+                const b = document.createElement('div');
+                b.className = 'brand';
+                b.textContent = item.brand || '';
+                meta.appendChild(t);
+                meta.appendChild(b);
+
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'btn btn-primary';
+                removeBtn.style.minWidth = '56px';
+                removeBtn.textContent = 'Remove';
+                removeBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const arr = getLikes();
+                    const idx = findLikeIndexById(arr, item.id);
+                    if (idx >= 0) {
+                        arr.splice(idx, 1);
+                        saveLikes(arr);
+                        updateLikesBadge();
+                        renderLikesPanelContents();
+                        // Update hearts on page
+                        document.querySelectorAll('.card-like-btn, .product-like-btn').forEach(el => {
+                            const card = el.closest('.product-card');
+                            const pid = card ? (card.getAttribute('data-id')) : null;
+                            if (pid && pid === item.id) el.classList.remove('liked');
+                            if (!pid && el.parentElement) {
+                                try {
+                                    const tEl = el.parentElement.querySelector('h4') || el.parentElement.querySelector('.product-title');
+                                    if (tEl && tEl.textContent.trim() === item.title) el.classList.remove('liked');
+                                } catch (err) { /* ignore */ }
+                            }
+                        });
+                    }
+                });
+
+                row.appendChild(img);
+                row.appendChild(meta);
+                row.appendChild(removeBtn);
+                likesPanel.appendChild(row);
+            });
+        } catch (e) { /* ignore */ }
+    }
+
+    // --------------------
+    // (Removed) Cart-related code
+    // --------------------
+    // All functions and UI dealing with cart state, cart panel, badges, notifications,
+    // and add-to-cart mutation have been removed from this file intentionally.
+
+    // --------------------
+    // Suggestions renderer (fallback) — adjusted: no Add-to-Cart buttons
+    // --------------------
     async function loadSimilarProducts(productId) {
         try {
             const res = await fetch(`${API}/products/similar?product_id=${encodeURIComponent(productId)}`);
@@ -41,282 +177,164 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // Render similar products slider
-    function renderSimilarProducts(products) {
-        const track = document.getElementById('sliderTrack');
+    function renderSuggestedCardsWithCTAs(containerId, products) {
+        const track = document.getElementById(containerId);
         if (!track) return;
         track.innerHTML = '';
         (products || []).forEach(p => {
+            const titleSafe = (p.title || p.name || 'Untitled');
+            const rawPrice = parseFloat(p.price);
+            const priceHtml = isNaN(rawPrice) ? '—' : ('$' + rawPrice.toFixed(2));
+
             const card = document.createElement('div');
-            card.className = 'slider-card';
-            const imgSrc = toStaticUrl(p.image_url || p.image_url_dynamic || '');
-            card.innerHTML = `
-                <img src="${imgSrc}" alt="${p.title}">
-                <div class="slider-title">${p.title}</div>
-                <div class="muted small">$${parseFloat(p.price || 0).toFixed(2)}</div>
-            `;
-            card.addEventListener('click', () => {
-                const brandParam = encodeURIComponent((p.brand || '').replace(/\s+/g, '_'));
-                const productParam = encodeURIComponent((p.title || '').replace(/\s+/g, '_'));
-                window.location.href = `/brand/${brandParam}/product/${productParam}`;
+            card.className = 'product-card';
+            if (p.brand) card.setAttribute('data-brand', p.brand);
+            if (p.id) card.setAttribute('data-id', p.id);
+
+            const mediaLink = document.createElement('a');
+            mediaLink.className = 'card-media';
+            const href = p.id
+                ? `/brand_detail?product_id=${encodeURIComponent(p.id)}`
+                : `/brand_detail?brand=${encodeURIComponent(p.brand || '')}&product=${encodeURIComponent((p.title || p.name || '').replace(/ /g, '_'))}`;
+            mediaLink.href = href;
+            const img = document.createElement('img');
+            img.src = toStaticUrl(p.image_url || p.image || '');
+            img.alt = titleSafe;
+            mediaLink.appendChild(img);
+
+            const body = document.createElement('div');
+            body.className = 'card-body';
+            const meta = document.createElement('div');
+            meta.className = 'meta';
+            const h4 = document.createElement('h4');
+            h4.textContent = titleSafe;
+            meta.appendChild(h4);
+            const footer = document.createElement('div');
+            footer.className = 'card-footer';
+            const priceRow = document.createElement('div');
+            priceRow.style.display = 'flex';
+            priceRow.style.justifyContent = 'flex-start';
+            priceRow.style.alignItems = 'center';
+            priceRow.style.gap = '8px';
+            const priceEl = document.createElement('div');
+            priceEl.style.fontWeight = '700';
+            priceEl.style.color = '#cc0000';
+            priceEl.style.fontSize = '0.92rem';
+            priceEl.textContent = priceHtml;
+            priceRow.appendChild(priceEl);
+            footer.appendChild(priceRow);
+
+            const ctaRow = document.createElement('div');
+            ctaRow.className = 'suggestion-cta-row';
+            ctaRow.setAttribute('role', 'group');
+            ctaRow.setAttribute('aria-label', 'Suggestion actions');
+
+            // Buy Now: keep disabled (no modal)
+            const buyBtn = document.createElement('button');
+            buyBtn.className = 'btn btn-buy suggestion-buy';
+            buyBtn.type = 'button';
+            buyBtn.setAttribute('aria-label', 'Buy Now');
+            buyBtn.textContent = 'Buy Now';
+            try {
+                buyBtn.disabled = true;
+                buyBtn.classList.add('btn-disabled');
+                buyBtn.title = 'Buy Now disabled on this page';
+            } catch (e) { /* ignore */ }
+            buyBtn.addEventListener('click', function (ev) {
+                ev.preventDefault();
+                try {
+                    const msgEl = card.querySelector('.suggestion-msg');
+                    if (msgEl) {
+                        msgEl.textContent = 'Buy Now is disabled on this page.';
+                        setTimeout(() => { try { msgEl.textContent = ''; } catch (e) { } }, 2500);
+                    }
+                } catch (e) { /* ignore */ }
             });
+
+            // NOTE: Add-to-Cart removed entirely — do not create addBtn here.
+            // If you want a disabled visual instead, uncomment the following block:
+            /*
+            const addBtn = document.createElement('button');
+            addBtn.className = 'btn btn-primary suggestion-add btn-disabled';
+            addBtn.type = 'button';
+            addBtn.setAttribute('aria-label', 'Add to Cart (disabled)');
+            addBtn.disabled = true;
+            addBtn.textContent = 'Add to Cart';
+            ctaRow.appendChild(addBtn);
+            */
+
+            // Ensure there's a suggestion-msg element for user feedback
+            const suggestionMsg = document.createElement('div');
+            suggestionMsg.className = 'suggestion-msg';
+            footer.appendChild(suggestionMsg);
+
+            ctaRow.appendChild(buyBtn);
+            footer.appendChild(ctaRow);
+
+            body.appendChild(meta);
+            body.appendChild(footer);
+
+            card.appendChild(mediaLink);
+            card.appendChild(body);
+
+            const likeBtn = document.createElement('button');
+            likeBtn.className = 'card-like-btn';
+            likeBtn.type = 'button';
+            likeBtn.setAttribute('aria-label', 'Like product');
+            likeBtn.title = 'Like';
+            const pid = p.id || p.product_id || p.title || (new Date().getTime());
+            if (isLiked(pid)) likeBtn.classList.add('liked');
+            likeBtn.innerHTML = '<span aria-hidden="true">♡</span>';
+            likeBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const added = toggleLikeProduct({
+                    id: p.id || p.product_id,
+                    title: p.title || p.name,
+                    brand: p.brand,
+                    price: p.price,
+                    image: p.image || p.image_url
+                });
+                likeBtn.classList.toggle('liked', added);
+            });
+
             track.appendChild(card);
+            card.appendChild(likeBtn);
         });
     }
 
-    // Small helpers for JSON and fetch
-    async function safeJson(res) {
+    // --------------------
+    // Product loader + init
+    // --------------------
+    function safeParam(name) {
         try {
-            return await res.json();
+            return decodeURIComponent(new URLSearchParams(window.location.search).get(name) || '');
         } catch (e) {
+            return '';
+        }
+    }
+
+    async function loadProductByApi(productApiUrl) {
+        try {
+            const res = await fetch(productApiUrl);
+            if (!res.ok) {
+                console.warn('Product API returned', res.status);
+                return null;
+            }
+            return await res.json();
+        } catch (err) {
+            console.warn('Failed to load product', err);
             return null;
         }
     }
-    async function apiFetch(path, opts = {}) {
-        const options = Object.assign({ credentials: 'same-origin' }, opts);
-        const res = await fetch(path, options);
-        return res;
-    }
 
-    // Keep reference to loaded product so buy-now can add it to cart
-    window.currentProduct = null;
+    async function initProductPage() {
+        updateLikesBadge();
 
-    // Local cart helpers (used by modal)
-    function getCart() { return JSON.parse(localStorage.getItem('cart') || '[]'); }
-    function saveCart(c) { localStorage.setItem('cart', JSON.stringify(c)); }
-
-    function addProductObjectToCart(prod, qty = 1) {
-        if (!prod) return;
-        const id = prod.id || prod.product_id || prod._id || prod.title || (new Date().getTime());
-        const title = prod.title || prod.name || (document.getElementById('productName') ? document.getElementById('productName').textContent : 'Product');
-        const brand = prod.brand || (document.getElementById('brandName') ? document.getElementById('brandName').textContent : '');
-        const price = Number(prod.price || prod.unit_price || prod.amount || 0);
-        const image = prod.image || prod.image_url || (document.getElementById('productImage') ? document.getElementById('productImage').src : '');
-
-        let cart = getCart();
-        const existing = cart.find(i => ('' + i.id) === ('' + id));
-        if (existing) {
-            existing.quantity = (existing.quantity || 0) + qty;
-            // update price/image/title/brand if missing
-            existing.price = existing.price || price;
-            existing.image = existing.image || toStaticUrl(image);
-            existing.title = existing.title || title;
-            existing.brand = existing.brand || brand;
-        } else {
-            cart.push({
-                id: id,
-                title: title,
-                brand: brand,
-                price: Number(price) || 0,
-                image: image ? toStaticUrl(image) : '',
-                quantity: qty
-            });
-        }
-        saveCart(cart);
-    }
-
-    // Try to extract product info from a clicked element (data-* attributes) or surrounding product-card
-    function extractProductFromElement(el) {
-        if (!el) return null;
-        // prefer dataset on the clicked element
-        const ds = el.dataset || {};
-        if (ds.title || ds.id || ds.price) {
-            return {
-                id: ds.id || ds.productId || ds.product_id || ds.pid,
-                title: ds.title || ds.name,
-                brand: ds.brand,
-                price: ds.price || ds.unitPrice || ds['unit_price'],
-                image: ds.image || ds.imageUrl || ds.image_url,
-                quantity: ds.qty || ds.quantity || ds.count || 1
-            };
-        }
-        // if this is inside a .product-card, try to pull details from it
-        const card = el.closest ? el.closest('.product-card') : null;
-        if (card) {
-            const titleEl = card.querySelector('h3') || card.querySelector('.product-title') || card.querySelector('.title');
-            const imgEl = card.querySelector('img') || card.querySelector('.product-image-box img');
-            const priceEl = card.querySelector('.discounted-price') || card.querySelector('.price') || card.querySelector('.meta .price');
-            return {
-                id: card.getAttribute('data-id') || (titleEl ? titleEl.textContent.trim().replace(/\s+/g, '_') : ''),
-                title: titleEl ? titleEl.textContent.trim() : '',
-                brand: card.getAttribute('data-brand') || '',
-                price: priceEl ? parseFloat((priceEl.textContent || '').replace(/[^0-9.]/g, '')) : 0,
-                image: imgEl ? (imgEl.src || imgEl.getAttribute('data-src') || '') : ''
-            };
-        }
-        // fallback: no structured info
-        return null;
-    }
-
-    // Render a simple modal cart summary into #modalCartSummary if present
-    function populateModalCartSummary() {
-        const outEl = document.getElementById('modalCartSummary') || document.getElementById('modalCartSummary');
-        if (!outEl) return;
-        const cart = getCart() || [];
-        if (!cart.length) {
-            outEl.innerHTML = '<div class="small-muted">Your cart is empty.</div>';
-            return;
-        }
-        let html = `<table style="width:100%;border-collapse:collapse;">
-            <thead><tr><th style="text-align:left">Product</th><th style="text-align:center;">Qty</th><th style="text-align:right;">Total</th></tr></thead><tbody>`;
-        let subtotal = 0;
-        cart.forEach(item => {
-            const qty = item.quantity || item.qty || 1;
-            const price = parseFloat(item.price || 0);
-            const itemTotal = price * qty;
-            subtotal += itemTotal;
-            html += `<tr>
-                <td style="padding:8px 6px;">
-                    <div style="display:flex;gap:8px;align-items:center;">
-                        <img src="${toStaticUrl(item.image || item.image_url || '')}" alt="${item.title || ''}" style="width:56px;height:56px;object-fit:contain;border-radius:6px;background:#fff;border:1px solid #eee;">
-                        <div>
-                            <div style="font-weight:600">${item.title || item.name || ''}</div>
-                            <div class="small-muted" style="font-size:13px">${item.brand || ''}</div>
-                        </div>
-                    </div>
-                </td>
-                <td style="text-align:center;">${qty}</td>
-                <td style="text-align:right;">$${itemTotal.toFixed(2)}</td>
-            </tr>`;
-        });
-        html += `</tbody>
-            <tfoot>
-                <tr class="total-row"><td></td><td style="font-weight:700;">Subtotal</td><td style="text-align:right;font-weight:700;">$${subtotal.toFixed(2)}</td></tr>
-                <tr class="total-row"><td></td><td style="font-weight:700;">Total</td><td style="text-align:right;color:#27ae60;font-weight:700;">$${subtotal.toFixed(2)}</td></tr>
-            </tfoot>
-        </table>`;
-        outEl.innerHTML = html;
-    }
-
-    // Open the shared checkout modal(s) used across templates
-    function openCheckoutModal() {
-        populateModalCartSummary();
-
-        // Common backdrop ids in templates
-        const backdropCandidates = ['checkoutBackdrop', 'checkoutModalBg', 'checkoutBackdrop', 'checkoutBackdrop', 'checkoutBackdrop'];
-        let shown = false;
-        backdropCandidates.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) {
-                try {
-                    el.style.display = 'flex';
-                    el.setAttribute('aria-hidden', 'false');
-                    el.style.alignItems = 'center';
-                    el.style.justifyContent = 'center';
-                    shown = true;
-                } catch (e) { /* ignore */ }
-            }
-        });
-
-        if (!shown) {
-            // fallback to checkout page if no modal present
-            window.location.href = '/checkout';
-            return;
-        }
-
-        // NOTE: Payment rendering (PayPal / card buttons) is intentionally not performed here.
-        // That logic should live in the centralized checkout/cart/paypal pages.
-    }
-
-    // Attach Buy handlers to many possible selectors including listing "Buy" buttons.
-    function attachBuyNowHandler() {
-        const selectors = [
-            '#buyNowBtn',
-            '#addCartBtn',
-            '.cta-button.buy-now',
-            '.action-button.buy-now',
-            'button.buy-now',
-            '.buy-now',
-            '.buy',
-            '.btn-buy',
-            '.product-actions .buy-now'
-        ];
-
-        const nodes = selectors.reduce((acc, sel) => {
-            try {
-                document.querySelectorAll(sel).forEach(n => acc.push(n));
-            } catch (e) { /* ignore bad selectors */ }
-            return acc;
-        }, []);
-
-        const uniq = Array.from(new Set(nodes));
-
-        if (!uniq.length) {
-            const addCartCompat = document.getElementById('addCartBtn');
-            if (addCartCompat) {
-                addCartCompat.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    if (window.currentProduct) addProductObjectToCart(window.currentProduct, 1);
-                    openCheckoutModal();
-                });
-            }
-            return;
-        }
-
-        uniq.forEach(btn => {
-            if (btn.dataset && btn.dataset._buynowAttached === '1') return;
-            btn.dataset._buynowAttached = '1';
-            btn.addEventListener('click', function (e) {
-                try { e.preventDefault(); } catch (err) { /* ignore */ }
-                const el = e.currentTarget || this;
-
-                // Prefer structured data from the clicked element
-                const fromEl = extractProductFromElement(el);
-                if (fromEl) {
-                    // use any numeric dataset qty or default to 1
-                    const qty = parseInt(fromEl.quantity || fromEl.qty || el.dataset.qty || 1, 10) || 1;
-                    addProductObjectToCart(fromEl, qty);
-                } else if (window.currentProduct) {
-                    addProductObjectToCart(window.currentProduct, 1);
-                } else {
-                    // fallback: minimal product from DOM
-                    const prod = {
-                        id: document.getElementById('productName') ? document.getElementById('productName').textContent : (new Date().getTime()),
-                        title: document.getElementById('productName') ? document.getElementById('productName').textContent : 'Product',
-                        brand: document.getElementById('brandName') ? document.getElementById('brandName').textContent : '',
-                        price: (function () {
-                            const p = document.getElementById('productPrice');
-                            if (!p) return 0;
-                            const txt = p.textContent || '';
-                            const num = parseFloat(txt.replace(/[^0-9.]+/g, ''));
-                            return isNaN(num) ? 0 : num;
-                        })(),
-                        image: (document.getElementById('productImage') && document.getElementById('productImage').src) ? document.getElementById('productImage').src : ''
-                    };
-                    addProductObjectToCart(prod, 1);
-                }
-
-                // Open modal (payment handled in checkout/cart pages)
-                openCheckoutModal();
-            });
-        });
-    }
-
-    // (Optional) wishlist button: placeholder behavior (toggle visual only)
-    function attachWishlistToggle() {
-        const wishlistBtn = document.getElementById('wishlistBtn') || document.getElementById('productWishlistBtn');
-        if (!wishlistBtn) return;
-        wishlistBtn.addEventListener('click', function () {
-            wishlistBtn.classList.toggle('wish-added');
-            wishlistBtn.textContent = wishlistBtn.classList.contains('wish-added') ? '♥ Wishlist' : '♡ Wishlist';
-            try {
-                const list = JSON.parse(localStorage.getItem('wishlist') || '[]');
-                const pid = window.currentProduct ? (window.currentProduct.id || window.currentProduct.product_id || window.currentProduct.title) : (document.getElementById('productName') ? document.getElementById('productName').textContent : new Date().getTime());
-                const idx = list.findIndex(i => ('' + i.id) === ('' + pid));
-                if (idx >= 0) { list.splice(idx, 1); } else { list.push({ id: pid, title: (window.currentProduct && window.currentProduct.title) || (document.getElementById('productName') ? document.getElementById('productName').textContent : '') }); }
-                localStorage.setItem('wishlist', JSON.stringify(list));
-            } catch (e) { /* ignore */ }
-        });
-    }
-
-    // Load product details and wire up the page
-    (async function initProductPage() {
-        // Get query params first (backwards compatible)
         const queryBrand = safeParam('brand') || '';
         const queryProduct = safeParam('product') || '';
         const queryProductId = safeParam('product_id') || '';
 
-        // Start with query params if present, otherwise fall back to path segments:
         let rawBrand = queryBrand;
         let rawProduct = queryProduct;
         let rawProductId = queryProductId;
@@ -339,11 +357,6 @@ document.addEventListener('DOMContentLoaded', function () {
         const productForApi = encodeURIComponent((rawProduct || '').replace(/ /g, '_'));
         const productIdForApi = encodeURIComponent((rawProductId || '').trim());
 
-        if (!brandForApi) {
-            console.warn('No brand specified in query string or path. Attempting to continue with empty brand.');
-        }
-
-        // If product_id present prefer the by-id endpoint
         let productApiUrl;
         if (productIdForApi) {
             productApiUrl = `${API}/product_by_id?product_id=${productIdForApi}`;
@@ -351,61 +364,34 @@ document.addEventListener('DOMContentLoaded', function () {
             productApiUrl = `${API}/products/${brandForApi}/${productForApi}`;
         }
 
-        try {
-            const res = await fetch(productApiUrl);
-            if (!res.ok) {
-                console.warn('Product API returned', res.status);
-                const nameEl = document.getElementById('productName');
-                if (nameEl) nameEl.textContent = 'Product not found';
-                return;
-            }
-            const productData = await res.json();
-
-            // Expose the product on window for buy/Add-to-cart handler
+        const productData = await loadProductByApi(productApiUrl);
+        if (!productData) {
+            const nameEl = document.getElementById('productTitle') || document.getElementById('productName');
+            if (nameEl) nameEl.textContent = 'Product not found';
+        } else {
             window.currentProduct = productData;
-
-            // Populate UI
             const pageTitle = document.getElementById('pageTitle');
-            if (pageTitle) pageTitle.textContent = `${productData.title} - ${productData.brand}`;
-            const pname = document.getElementById('productName');
-            if (pname) pname.textContent = productData.title;
-            const bname = document.getElementById('brandName');
+            if (pageTitle) pageTitle.textContent = `${productData.title || productData.name} - ${productData.brand || ''}`;
+            const pname = document.getElementById('productTitle') || document.getElementById('productName');
+            if (pname) pname.textContent = productData.title || productData.name || '';
+            const bname = document.getElementById('brandName') || document.getElementById('productBrand');
             if (bname) bname.textContent = productData.brand || '';
-            const priceEl = document.getElementById('productPrice');
+            const priceEl = document.getElementById('priceNow') || document.getElementById('productPrice');
             if (priceEl) priceEl.textContent = "$" + (parseFloat(productData.price || 0)).toFixed(2);
-            const descEl = document.getElementById('productDescription');
+            const descEl = document.getElementById('productDescription') || document.getElementById('detailedDescription');
             if (descEl) descEl.textContent = productData.description || '';
 
-            // Key notes
-            const keyNotesArr = Array.isArray(productData.keyNotes) ? productData.keyNotes :
-                (typeof productData.keyNotes === 'string' ? productData.keyNotes.split(';') : []);
-            const keyNotesEl = document.getElementById('keyNotes');
-            if (keyNotesEl) {
-                keyNotesEl.innerHTML = '';
-                keyNotesArr.forEach(n => {
-                    const text = (typeof n === 'string') ? n.trim() : (n || '');
-                    if (text) {
-                        const li = document.createElement('li');
-                        li.textContent = text;
-                        keyNotesEl.appendChild(li);
-                    }
-                });
-            }
-
-            // Thumbnails
-            const thumbsCol = document.getElementById('thumbnailsCol');
+            const thumbsCol = document.getElementById('thumbnailsCol') || document.getElementById('thumbsContainer');
             if (thumbsCol) thumbsCol.innerHTML = '';
             const thumbnails = typeof productData.thumbnails === 'string' ? productData.thumbnails.split(',').map(s => s.trim()).filter(Boolean) : (productData.thumbnails || []);
-            if (thumbnails.length === 0 && productData.image_url) {
-                thumbnails.push(productData.image_url);
-            }
+            if (thumbnails.length === 0 && productData.image_url) thumbnails.push(productData.image_url);
             thumbnails.forEach((turl, idx) => {
                 const img = document.createElement('img');
                 img.src = toStaticUrl(turl);
                 img.className = 'thumbnail-img';
                 img.alt = `Thumbnail ${idx + 1}`;
                 img.addEventListener('click', () => {
-                    const mainImgEl = document.getElementById('productImage');
+                    const mainImgEl = document.getElementById('productImage') || document.getElementById('mainImage');
                     if (mainImgEl) mainImgEl.src = toStaticUrl(turl);
                     document.querySelectorAll('.thumbnail-img').forEach(x => x.classList.remove('selected'));
                     img.classList.add('selected');
@@ -414,39 +400,136 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (idx === 0) img.classList.add('selected');
             });
 
-            // Set main image
-            const mainImg = document.getElementById('productImage');
+            const mainImg = document.getElementById('productImage') || document.getElementById('mainImage');
             const mainSrc = (thumbnails.length > 0) ? thumbnails[0] : (productData.image_url || '');
-            if (mainImg) mainImg.src = toStaticUrl(mainSrc);
+            if (mainImg && mainSrc) mainImg.src = toStaticUrl(mainSrc);
 
-            // product tags
-            const tagsEl = document.getElementById('productTags');
-            if (tagsEl) {
-                if (productData.tags) {
-                    const tags = typeof productData.tags === 'string' ? productData.tags.split(',').map(s => s.trim()).filter(Boolean) : productData.tags;
-                    tagsEl.textContent = 'Tags: ' + tags.join(', ');
-                } else {
-                    tagsEl.textContent = '';
-                }
+            injectMainProductLikeButton();
+            const productLikeBtn = document.querySelector('.product-like-btn') || document.getElementById('productLikeBtn');
+            if (productLikeBtn) {
+                const liked = isLiked(productData.id || productData.product_id || productData.title);
+                productLikeBtn.classList.toggle('liked', liked);
             }
 
-            // Similar products
-            const similar = await loadSimilarProducts(productData.id);
-            renderSimilarProducts(similar);
+            // Deactivate page Buy Now (kept disabled earlier)
+            try {
+                const pageBuy = document.getElementById('buyNowBtnPage') || document.getElementById('buyNowBtn');
+                if (pageBuy) {
+                    pageBuy.disabled = true;
+                    pageBuy.classList.add('btn-disabled');
+                    pageBuy.setAttribute('aria-disabled', 'true');
+                    pageBuy.title = 'Buy Now disabled on this page';
+                    pageBuy.addEventListener('click', function (ev) {
+                        ev.preventDefault();
+                        const msg = document.getElementById('productActionMsg');
+                        if (msg) {
+                            msg.textContent = 'Buy Now is disabled on this page.';
+                            setTimeout(() => { try { msg.textContent = ''; } catch (e) { } }, 2500);
+                        }
+                    }, true);
+                }
+            } catch (e) { /* ignore */ }
+        }
 
-            // Attach buy now handler now that we have productData
-            attachBuyNowHandler();
+        if (typeof window.loadSuggestions === 'function') {
+            try {
+                await window.loadSuggestions();
+            } catch (e) {
+                console.warn('page loadSuggestions failed, falling back to internal renderer', e);
+                const similar = await loadSimilarProducts(window.currentProduct ? window.currentProduct.id : '');
+                renderSuggestedCardsWithCTAs('suggestedTrack', similar);
+            }
+        } else {
+            const similar = await loadSimilarProducts(window.currentProduct ? window.currentProduct.id : '');
+            renderSuggestedCardsWithCTAs('suggestedTrack', similar);
+        }
 
-            // attach wishlist toggle if present (keeps a distinct wishlist button from buy-now)
-            attachWishlistToggle();
+        // Attach only non-cart handlers
+        attachLikeHandlers();
+        // Note: cart panel and add-to-cart handlers intentionally not attached/created.
+        updateLikesBadge();
+        renderLikesPanelContents();
+    }
 
+    function injectMainProductLikeButton() {
+        try {
+            let container = document.querySelector('.product-image-wrapper') || document.querySelector('.product-gallery') || null;
+            if (!container) {
+                const imgEl = document.getElementById('productImage') || document.getElementById('mainImage');
+                if (imgEl && imgEl.parentElement) container = imgEl.parentElement;
+            }
+            if (!container) return;
+            if (container.querySelector('.product-like-btn')) return;
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'product-like-btn';
+            btn.setAttribute('aria-label', 'Like product');
+            btn.title = 'Like';
+            btn.innerHTML = '<span aria-hidden="true">♡</span>';
+            // fixed assignment to set position if not present
+            container.style.position = container.style.position || 'relative';
+            container.appendChild(btn);
+        } catch (e) { /* ignore */ }
+    }
+
+    // Attach like handlers only
+    function attachLikeHandlers() {
+        document.addEventListener('click', function (e) {
+            const likeBtn = e.target.closest ? e.target.closest('.card-like-btn, .product-like-btn, [data-action="like"]') : null;
+            if (!likeBtn) return;
+            e.preventDefault();
+            e.stopPropagation();
+
+            let prod = null;
+            const card = likeBtn.closest ? likeBtn.closest('.product-card') : null;
+            if (card) {
+                prod = {
+                    id: card.getAttribute('data-id') || undefined,
+                    title: (card.querySelector('h4') ? card.querySelector('h4').textContent.trim() : undefined),
+                    brand: card.getAttribute('data-brand') || undefined,
+                    image: (card.querySelector('img') ? card.querySelector('img').src : undefined)
+                };
+            } else if (window.currentProduct) {
+                prod = window.currentProduct;
+            }
+            if (!prod) return;
+            const added = toggleLikeProduct(prod);
+            try {
+                likeBtn.classList.toggle('liked', added);
+            } catch (err) { /* ignore */ }
+        });
+
+        const likesBtn = document.getElementById('likesBtn');
+        const likesPanel = document.getElementById('likesPanel');
+        if (likesBtn && likesPanel) {
+            likesBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                const visible = likesPanel.style.display === 'block';
+                if (visible) {
+                    likesPanel.style.display = 'none';
+                    likesPanel.setAttribute('aria-hidden', 'true');
+                } else {
+                    renderLikesPanelContents();
+                    likesPanel.style.display = 'block';
+                    likesPanel.setAttribute('aria-hidden', 'false');
+                }
+            });
+            document.addEventListener('click', (ev) => {
+                if (!likesPanel) return;
+                if (!likesPanel.contains(ev.target) && !likesBtn.contains(ev.target)) {
+                    likesPanel.style.display = 'none';
+                    likesPanel.setAttribute('aria-hidden', 'true');
+                }
+            });
+        }
+    }
+
+    // Initialize
+    (async function runInit() {
+        try {
+            await initProductPage();
         } catch (err) {
-            console.error('Failed to load product', err);
-            const nameEl = document.getElementById('productName');
-            if (nameEl) nameEl.textContent = 'Product unavailable';
-            const descEl = document.getElementById('productDescription');
-            if (descEl) descEl.textContent = '';
+            console.error('init error', err);
         }
     })();
-
 });

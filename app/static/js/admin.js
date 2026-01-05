@@ -1,3 +1,4 @@
+/* static/js/admin.js */
 const API = "/api";
 const CONTENT_API = "/content-api";
 
@@ -389,7 +390,7 @@ if (el('pcResetBtn')) el('pcResetBtn').addEventListener('click', async (e) => {
 });
 
 /* ------------------------------
-   Brands CRUD
+   Brands CRUD (use id for edits/deletes; name editable)
    ------------------------------ */
 async function loadBrands() {
     try {
@@ -400,31 +401,66 @@ async function loadBrands() {
         tbody.innerHTML = '';
         brands.forEach(b => {
             const tr = document.createElement('tr');
+            // include id attribute for robust edit/delete
             tr.innerHTML = `
                 <td>${escapeHtml(b.name)}</td>
                 <td><img src="${toStaticUrl(b.logo)}" alt="Logo" style="height:36px;border-radius:4px;"></td>
                 <td>${escapeHtml(b.description || '')}</td>
                 <td class="action">
-                    <button class="btn small accent edit-brand" data-name="${escapeHtmlAttr(b.name)}"><span class="material-icons">edit</span></button>
-                    <button class="btn small danger delete-brand" data-name="${escapeHtmlAttr(b.name)}"><span class="material-icons">delete</span></button>
+                    <button class="btn small accent edit-brand" data-id="${escapeHtmlAttr(b.id)}" data-name="${escapeHtmlAttr(b.name)}"><span class="material-icons">edit</span></button>
+                    <button class="btn small danger delete-brand" data-id="${escapeHtmlAttr(b.id)}" data-name="${escapeHtmlAttr(b.name)}"><span class="material-icons">delete</span></button>
                 </td>
             `;
             tbody.appendChild(tr);
         });
-        qa('.edit-brand', tbody).forEach(btn => btn.addEventListener('click', e => openBrandEditorByName(e.currentTarget.dataset.name)));
+        // wire by id when available
+        qa('.edit-brand', tbody).forEach(btn => btn.addEventListener('click', e => openBrandEditorById(e.currentTarget.dataset.id || e.currentTarget.dataset.name)));
         qa('.delete-brand', tbody).forEach(btn => btn.addEventListener('click', async e => {
-            const name = e.currentTarget.dataset.name;
+            const id = e.currentTarget.dataset.id || e.currentTarget.dataset.name;
+            const name = e.currentTarget.dataset.name || id;
             if (!confirm(`Delete brand ${name}?`)) return;
-            try { await apiFetch(`${API}/brands/${encodeURIComponent(name)}`, { method: 'DELETE' }); adminNotify('Brand deleted', 'success'); loadBrands(); }
+            try {
+                // prefer numeric id delete if id is numeric, else use name-based delete for compatibility
+                const target = id && String(id).match(/^\d+$/) ? `${API}/brands/${encodeURIComponent(id)}` : `${API}/brands/${encodeURIComponent(name)}`;
+                const res = await apiFetch(target, { method: 'DELETE' });
+                if (!res.ok) {
+                    const t = await res.text().catch(() => res.statusText);
+                    adminNotify('Delete failed: ' + t, 'error');
+                } else {
+                    adminNotify('Brand deleted', 'success');
+                    loadBrands();
+                }
+            }
             catch (err) { console.error(err); adminNotify('Failed to delete brand', 'error'); }
         }));
     } catch (err) { console.warn('loadBrands error', err); }
 }
 
-function openBrandEditorByName(name) {
-    apiFetch(`${API}/brands`).then(res => res.json()).then(list => {
-        const brand = (list || []).find(b => b.name === name); showBrandModal(brand);
-    }).catch(err => console.warn(err));
+async function openBrandEditorById(idOrName) {
+    // try id fetch first (ids are numeric in server model)
+    if (!idOrName) return;
+    try {
+        if (String(idOrName).match(/^\d+$/)) {
+            const res = await apiFetch(`${API}/brands/${encodeURIComponent(idOrName)}`);
+            if (res.ok) {
+                const brand = await res.json().catch(() => null);
+                showBrandModal(brand);
+                return;
+            }
+        }
+    } catch (e) {
+        // ignore and fall back to list lookup
+    }
+    // fallback: fetch brands list and find by name
+    try {
+        const res = await apiFetch(`${API}/brands`);
+        if (!res.ok) return;
+        const list = await res.json();
+        const brand = (list || []).find(b => b.name === idOrName || String(b.id) === String(idOrName));
+        showBrandModal(brand);
+    } catch (err) {
+        console.warn(err);
+    }
 }
 
 function showBrandModal(brand) {
@@ -432,13 +468,14 @@ function showBrandModal(brand) {
     if (!modalBg || !modalContent) return;
     modalBg.style.display = 'flex';
     const name = brand ? escapeHtmlAttr(brand.name) : '';
-    const logo = brand ? escapeHtmlAttr(brand.logo) : '';
+    const logo = brand ? escapeHtmlAttr(brand.logo || '') : '';
     const desc = brand ? escapeHtmlAttr(brand.description || '') : '';
     modalContent.innerHTML = `
         <h3>${brand ? "Edit" : "Add"} Brand</h3>
         <form id="brandForm">
             <label>Name</label>
-            <input name="name" required value="${name}" ${brand ? 'readonly' : ''}>
+            <!-- allow editing name when editing existing brand -->
+            <input name="name" required value="${name}">
             <label>Logo URL</label>
             <input name="logo" required value="${logo}">
             <label>Description</label>
@@ -455,9 +492,15 @@ function showBrandModal(brand) {
         const data = Object.fromEntries(new FormData(e.target).entries());
         try {
             let res;
-            if (!brand) res = await apiFetch(`${API}/brands`, { method: 'POST', body: data });
-            else res = await apiFetch(`${API}/brands/${encodeURIComponent(brand.name)}`, { method: 'PUT', body: data });
-            if (!res.ok) { const t = await res.text(); adminNotify('Save failed: ' + t, 'error'); }
+            if (!brand) {
+                // create new brand
+                res = await apiFetch(`${API}/brands`, { method: 'POST', body: data });
+            } else {
+                // Update by id when available (safer). Fall back to name-based endpoint if id missing.
+                const ident = brand.id ? encodeURIComponent(brand.id) : encodeURIComponent(brand.name);
+                res = await apiFetch(`${API}/brands/${ident}`, { method: 'PUT', body: data });
+            }
+            if (!res.ok) { const t = await res.text().catch(() => res.statusText); adminNotify('Save failed: ' + t, 'error'); }
             else adminNotify('Brand saved', 'success');
         } catch (err) { console.error(err); adminNotify('Network error', 'error'); }
         closeModal(); loadBrands();

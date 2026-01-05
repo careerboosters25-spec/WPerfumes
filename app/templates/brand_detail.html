@@ -12,66 +12,146 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/announcements.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/footer.css') }}">
 
+    <!-- Cart integration CSS (adds cart dropdown + notification styles) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/cart_integration.css') }}">
+
     <style>
-        /* Lightweight page-specific overrides so the page is usable even without full CSS */
-        .product-page {
-            max-width: 1100px;
-            margin: 20px auto;
-            padding: 18px;
-            display: grid;
-            grid-template-columns: 1fr 380px;
-            gap: 22px;
-            align-items: start;
+        /* Lightweight page-specific overrides so the page is usable even without full CSS
+           — Improved visuals, colorful edge and CTA sizing to keep buttons side-by-side. */
+        :root {
+            --panel-radius: 16px;
+            --edge-blur: 10px;
+            --edge-offset: 8px;
+            --accent-green-a: #2d8f7c;
+            --accent-green-b: #34b98f;
+            --accent-blue: #6dd3f6;
+            --accent-purple: #b39ddb;
+            --accent-coral: #ff6b6b;
+            --panel-bg-start: #ffffff;
+            --panel-bg-end: #fbfdff;
+            --muted-text: #666;
+            --title-dark: #142026;
+            --price-red: #cc0000;
         }
 
-        .product-gallery {
-            background: #fff;
-            border-radius: 10px;
-            padding: 16px;
-            border: 1px solid #eee;
+        .product-page {
+            max-width: 1100px;
+            margin: 28px auto;
+            padding: 22px;
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 26px;
+            align-items: start;
+            position: relative;
+            border-radius: var(--panel-radius);
+            z-index: 0;
+            box-sizing: border-box;
+        }
+
+        .product-page::before {
+            content: "";
+            position: absolute;
+            inset: calc(-1 * var(--edge-offset));
+            border-radius: calc(var(--panel-radius) + var(--edge-offset));
+            background: conic-gradient(from 200deg,
+                    var(--accent-coral),
+                    #ffb86b,
+                    #ffd86b,
+                    var(--accent-green-a),
+                    var(--accent-blue),
+                    var(--accent-purple),
+                    var(--accent-coral));
+            filter: blur(var(--edge-blur));
+            opacity: 0.95;
+            z-index: -2;
+            pointer-events: none;
+        }
+
+        .product-page::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: var(--panel-radius);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.995));
+            z-index: -1;
+            pointer-events: none;
+            box-shadow: 0 10px 30px rgba(12, 30, 45, 0.06);
         }
 
         .product-main-image {
             width: 100%;
-            height: 540px;
+            height: 560px;
             max-height: 60vh;
             object-fit: contain;
-            background: #fafafa;
-            border-radius: 8px;
+            background: linear-gradient(135deg, #ffffff, #f7fbff);
+            border-radius: 12px;
+            padding: 14px;
+            border: 1px solid rgba(15, 43, 68, 0.03);
+            box-shadow: 0 8px 22px rgba(9, 30, 55, 0.06);
+        }
+
+        .product-gallery {
+            background: linear-gradient(180deg, var(--panel-bg-start), var(--panel-bg-end));
+            border-radius: 12px;
+            padding: 18px;
+            border: 1px solid rgba(12, 30, 45, 0.04);
+            box-shadow: 0 6px 18px rgba(12, 30, 45, 0.04);
+            transition: transform 180ms ease, box-shadow 180ms ease;
+        }
+
+        .product-gallery:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 18px 40px rgba(12, 30, 45, 0.08);
         }
 
         .thumbs {
             display: flex;
             gap: 10px;
-            margin-top: 12px;
+            margin-top: 14px;
         }
 
         .thumbs img {
             width: 78px;
             height: 78px;
             object-fit: contain;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
-            border: 1px solid #eee;
+            border: 2px solid transparent;
             background: #fff;
+            transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease;
+        }
+
+        .thumbs img:hover {
+            transform: translateY(-6px) scale(1.02);
+            box-shadow: 0 8px 18px rgba(15, 43, 68, 0.08);
+            border-color: rgba(45, 143, 124, 0.12);
+        }
+
+        .thumbs img.selected {
+            border-color: var(--accent-green-a);
+            box-shadow: 0 10px 24px rgba(45, 143, 124, 0.12);
         }
 
         .product-info {
-            background: #fff;
-            border-radius: 10px;
-            padding: 16px;
-            border: 1px solid #eee;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.99));
+            border-radius: 12px;
+            padding: 18px;
+            border: 1px solid rgba(12, 30, 45, 0.03);
+            box-shadow: 0 10px 28px rgba(9, 30, 55, 0.04);
         }
 
         .product-title {
-            font-size: 1.45rem;
+            font-size: 1.6rem;
             margin: 0;
-            color: #222;
+            color: var(--title-dark);
+            font-weight: 800;
+            letter-spacing: 0.2px;
         }
 
         .product-brand {
-            color: #666;
+            color: var(--muted-text);
             margin-top: 6px;
+            font-size: 0.98rem;
         }
 
         .price-row {
@@ -82,57 +162,112 @@
         }
 
         .price {
-            font-size: 1.35rem;
-            color: #cc0000;
-            font-weight: 800;
+            font-size: 1.45rem;
+            color: var(--price-red);
+            font-weight: 900;
+            letter-spacing: 0.3px;
         }
 
         .discounted-price {
-            font-size: 1.15rem;
-            color: #27ae60;
+            font-size: 1rem;
+            color: #2d8f7c;
             font-weight: 800;
-        }
-
-        .action-row {
-            display: flex;
-            gap: 10px;
-            margin-top: 16px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            padding: 10px 14px;
-            border-radius: 8px;
-            border: none;
-            cursor: pointer;
-            font-weight: 700;
-        }
-
-        .btn-primary {
-            background: #2d8f7c;
-            color: #fff;
-        }
-
-        .btn-buy {
-            background: #4aa3ff;
-            color: #fff;
-        }
-
-        .btn-disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .small-muted {
-            color: #666;
-            font-size: 0.95rem;
         }
 
         .notes {
             margin-top: 12px;
             color: #333;
-            line-height: 1.45;
+            line-height: 1.5;
+        }
+
+        /* Action row: keep horizontal layout on desktop and prevent wrapping when action text appears */
+        .action-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+            align-items: center;
+            flex-wrap: nowrap;
+            /* keep CTAs side-by-side */
+            align-content: center;
+        }
+
+        /* main page buy now uses a page-specific id so checkout.js doesn't accidentally target it */
+        #buyNowBtnPage {
+            order: 0;
+        }
+
+        #addToCartBtn {
+            order: 1;
+        }
+
+        /* CTA base styles (reduced sizes so they fit side-by-side) */
+        .btn {
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            font-weight: 800;
+            font-size: 0.92rem;
+            transition: transform 120ms ease, box-shadow 120ms ease;
+            display: inline-flex;
+            gap: 8px;
+            align-items: center;
+            justify-content: center;
+            min-width: 100px;
+        }
+
+        .btn:focus {
+            outline: 3px solid rgba(45, 143, 124, 0.14);
+            outline-offset: 2px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(90deg, var(--accent-green-a), var(--accent-green-b));
+            color: #fff;
+            box-shadow: 0 8px 20px rgba(46, 128, 99, 0.18);
+            font-weight: 800;
+            min-width: 95px;
+            padding: 10px 12px;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 14px 34px rgba(46, 128, 99, 0.22);
+        }
+
+        .btn-buy {
+            background: linear-gradient(90deg, #ff6b6b, #ff8a6b);
+            color: #fff;
+            box-shadow: 0 10px 30px rgba(255, 107, 107, 0.18);
+            font-size: 0.96rem;
+            padding: 11px 14px;
+            min-width: 115px;
+        }
+
+        .btn-buy:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 16px 38px rgba(255, 107, 107, 0.22);
+        }
+
+        .btn-disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+            pointer-events: none;
+        }
+
+        .small-muted {
+            color: var(--muted-text);
+            font-size: 0.95rem;
+        }
+
+        aside[aria-label="Key notes and description"] {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(250, 251, 255, 0.98));
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid rgba(12, 30, 45, 0.03);
+            box-shadow: 0 8px 20px rgba(9, 30, 55, 0.04);
         }
 
         .slider-section {
@@ -145,7 +280,7 @@
         .slider-window {
             width: 100%;
             overflow: hidden;
-            border-radius: 6px;
+            border-radius: 10px;
         }
 
         .slider-track {
@@ -156,18 +291,237 @@
             will-change: transform;
         }
 
+        /*
+         * Product card layout for the suggestion slider
+         * - Cards remain equal width and equal height so CTA is visible
+         * - Reduce internal sizes so everything fits in the card without cropping
+         */
         .slider-track .product-card {
             width: 220px;
             flex: 0 0 auto;
+            transition: transform 160ms ease;
+            display: flex;
+            flex-direction: column;
+            height: 340px;
+            /* fixed equal height that accommodates reduced CTAs */
+            box-sizing: border-box;
+            background: linear-gradient(180deg, #fff, #fbfcff);
+            border-radius: 10px;
+            overflow: visible;
+            /* allow focus outlines / shadows to be visible if needed */
+            border: 1px solid rgba(12, 30, 45, 0.04);
+            box-shadow: 0 6px 18px rgba(12, 30, 45, 0.04);
+            padding: 0;
+            min-height: 0;
+        }
+
+        .slider-track .product-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 14px 34px rgba(12, 30, 45, 0.08);
+        }
+
+        .product-card .card-media {
+            flex: 0 0 160px;
+            /* slightly reduced media area so remaining body fits */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            background: #fff;
+            box-sizing: border-box;
+        }
+
+        .product-card .card-media img {
+            width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: 6px;
+            background: #fff;
+            border: 1px solid #eee;
+            box-sizing: border-box;
+        }
+
+        .product-card .card-body {
+            flex: 1 1 auto;
+            padding: 8px 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 6px;
+            box-sizing: border-box;
+            min-height: 0;
+            /* allow proper flex shrink */
+        }
+
+        .product-card .meta {
+            display: block;
+        }
+
+        .product-card .meta h4 {
+            font-size: 0.88rem;
+            margin: 2px 0 4px;
+            line-height: 1.15;
+            max-height: 2.3em;
+            /* ~2 lines */
+            overflow: hidden;
+            word-break: break-word;
+        }
+
+        .product-card .meta .brand {
+            color: #888;
+            font-size: 0.82rem;
+            line-height: 1.1;
+            max-height: 1.8em;
+            overflow: hidden;
+        }
+
+        .product-card .card-footer {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .suggestion-msg {
+            color: #666;
+            font-size: 0.78rem;
+            min-height: 18px;
+            text-align: center;
+        }
+
+        /*
+         * Guarantee nothing inside the card is cropped:
+         * - Use smaller media area + text + reduced CTA size so content fits into height
+         * - Allow the product-card to increase slightly if still needed on very long titles
+         */
+        .slider-track .product-card {
+            /* allow small growth if necessary while keeping widths equal */
+            max-height: 420px;
         }
 
         @media (max-width: 980px) {
             .product-page {
                 grid-template-columns: 1fr;
+                padding: 16px;
             }
 
             .product-main-image {
                 height: 420px;
+            }
+
+            /* Reduce card height on smaller screens so layout fits */
+            .slider-track .product-card {
+                height: 300px;
+                max-height: 360px;
+            }
+
+            .product-card .card-media {
+                flex: 0 0 130px;
+            }
+
+            .suggestion-cta-row .btn {
+                font-size: 0.5rem;
+                /* slightly larger readable size on small screens */
+                padding: 6px 8px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .slider-track .product-card {
+                width: 180px;
+                height: 280px;
+            }
+
+            .product-card .card-media {
+                flex: 0 0 120px;
+            }
+
+            .suggestion-cta-row .btn {
+                font-size: 0.54rem;
+                padding: 6px 8px;
+            }
+        }
+
+        /* Utility classes */
+        .hidden {
+            display: none !important;
+        }
+
+        .muted {
+            color: var(--muted);
+            font-size: 0.95em;
+        }
+
+        .small {
+            font-size: 13px;
+        }
+
+        /* --- Modal styles for embedded checkout --- */
+        #checkoutModalBg {
+            position: fixed;
+            inset: 0;
+            background: rgba(7, 18, 25, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1200;
+            padding: 20px;
+        }
+
+        /* Reduce the modal width so single-column layout looks good on desktop */
+        #checkoutModal {
+            max-width: 720px;
+            /* reduced from 980px to better match single-column layout */
+            width: 100%;
+            max-height: calc(100vh - 48px);
+            overflow: auto;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 24px 80px rgba(3, 22, 40, 0.4);
+            position: relative;
+            padding: 18px;
+        }
+
+        #checkoutModalContent {
+            display: block;
+        }
+
+        #checkoutModal .modal-close {
+            position: absolute;
+            right: 12px;
+            top: 12px;
+            background: transparent;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #333;
+        }
+
+        /* make checkout modal form single-column on wide screens and hide the right panel inside the modal */
+        /* This removes the small empty (right) column and shows only the main checkout details. */
+        #checkoutModal .grid {
+            display: grid;
+            grid-template-columns: 1fr !important;
+            /* force single column inside modal */
+            gap: 18px;
+            align-items: start;
+        }
+
+        /* Hide the cart-summary and related right-column content only in modal context. */
+        #checkoutModal .cart-summary,
+        #checkoutModal #deliveryProvidersSection,
+        #checkoutModal #paypal-button-container,
+        #checkoutModal .cart-summary+* {
+            display: none !important;
+        }
+
+        /* Make sure modal form gets slightly more horizontal space */
+        #checkoutModalContent {
+            padding-right: 6px;
+        }
+
+        @media (max-width: 920px) {
+            #checkoutModal .grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -176,7 +530,7 @@
 <body>
     {% include 'announcements.html' %}
 
-    <!-- Navbar (updated to match homepage navigation tabs & features) -->
+    <!-- Navbar -->
     <nav class="navbar" role="navigation" aria-label="Main navigation">
         <div style="display:flex;align-items:center;gap:12px;">
             <a class="brand-logo" href="{{ url_for('main.index') }}">WPerfumes</a>
@@ -191,14 +545,14 @@
 
         <div class="navbar-center">
             <div class="search-container">
-                <!-- keep id 'siteSearch' to preserve any existing scripts on brand_detail that reference it -->
                 <input id="siteSearch" type="text" placeholder="Search for scents, notes, or brands..."
                     aria-label="Search">
             </div>
         </div>
 
         <div class="navbar-right">
-            <a id="cartBtn" class="cart-btn" href="{{ url_for('main.cart') }}" aria-label="Open cart">
+            <!-- Cart button: kept for layout but cart behavior removed from this template -->
+            <button id="cartBtn" class="cart-btn" aria-label="Cart" type="button">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3e2723" stroke-width="2"
                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <circle cx="9" cy="21" r="1"></circle>
@@ -207,7 +561,24 @@
                 </svg>
                 <span>Cart</span>
                 <span id="cartCountBadge" class="cart-count-badge" style="display:none;">0</span>
-            </a>
+            </button>
+
+            <!-- Pre-declare cartPanel so layout is stable; kept for layout only -->
+            <div id="cartPanel" class="cart-panel" aria-hidden="true" style="display:none"></div>
+
+            <!-- Likes button in navbar -->
+            <button id="likesBtn" class="likes-btn" aria-label="Likes" title="Likes" type="button">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3e2723" stroke-width="1.6"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                    <path
+                        d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 1 0-7.8 7.8L12 22l8.8-9.6a5.5 5.5 0 0 0 0-7.8z">
+                    </path>
+                </svg>
+                <span>Likes</span>
+                <span id="likesCountBadge" class="likes-count-badge" style="display:none;">0</span>
+            </button>
+
+            <div id="likesPanel" class="likes-panel" aria-hidden="true"></div>
 
             <div class="login-menu-container">
                 <a href="{{ url_for('main.login_page') }}" class="login-btn">Login</a>
@@ -220,13 +591,29 @@
 
     <!-- PRODUCT DETAIL -->
     <main class="product-page" role="main" aria-labelledby="productTitle">
+        <!-- Left: image window + thumbnails -->
         <section class="product-gallery" aria-label="Product media">
             <img id="mainImage" class="product-main-image" alt="Product image"
                 src="{{ url_for('static', filename='images/placeholder.jpg') }}">
-            <div class="thumbs" id="thumbsContainer" aria-hidden="false"></div>
-            <!-- product-level payment UI removed: payments are handled in cart/checkout/paypal pages -->
+
+            <!-- Like button overlay for the main product (added here for templates that render it) -->
+            <button id="productLikeBtn" class="product-like-btn" type="button" aria-label="Like product" title="Like">
+                <span aria-hidden="true">♡</span>
+            </button>
+
+            <div class="thumbs" id="thumbsContainer" aria-hidden="false" style="margin-top:12px;">
+                <img id="thumb1" src="{{ url_for('static', filename='images/placeholder.jpg') }}" alt="Thumb 1"
+                    role="button">
+                <img id="thumb2" src="{{ url_for('static', filename='images/placeholder.jpg') }}" alt="Thumb 2"
+                    role="button">
+                <img id="thumb3" src="{{ url_for('static', filename='images/placeholder.jpg') }}" alt="Thumb 3"
+                    role="button">
+                <img id="thumb4" src="{{ url_for('static', filename='images/placeholder.jpg') }}" alt="Thumb 4"
+                    role="button">
+            </div>
         </section>
 
+        <!-- Center: title, brand, price, qty, actions -->
         <aside class="product-info" aria-label="Product information">
             <h1 id="productTitle" class="product-title">Loading…</h1>
             <div id="productBrand" class="product-brand small-muted"></div>
@@ -246,8 +633,13 @@
             </div>
 
             <div class="action-row">
-                <button id="addToCartBtn" class="btn btn-primary" type="button">Add to Cart</button>
-                <button id="buyNowBtn" class="btn btn-buy" type="button">Buy Now</button>
+                <!-- Buy Now (page) is intentionally deactivated (no checkout modal/navigation) -->
+                <button id="buyNowBtnPage" class="btn btn-buy btn-disabled" type="button" disabled>Buy Now</button>
+
+                <!-- Add to Cart is present as a visual placeholder but intentionally inert (disabled) -->
+                <button id="addToCartBtn" class="btn btn-primary btn-disabled" type="button" disabled
+                    aria-disabled="true" title="Add to Cart is disabled on this page">Add to Cart</button>
+
                 <div id="productActionMsg" class="small-muted" style="margin-left:8px;"></div>
             </div>
 
@@ -255,6 +647,19 @@
                 <div class="small-muted">Free returns within 14 days. Secure payments with PayPal and major cards
                     (handled at checkout).</div>
             </div>
+        </aside>
+
+        <!-- Right: Key Notes and detailed description -->
+        <aside class="product-info" aria-label="Key notes and description" style="grid-column: 3;">
+            <h3 class="product-title" style="font-size:1.05rem;margin:0 0 8px 0;">Key Notes</h3>
+            <div class="notes" style="margin-bottom:10px;">
+                <ul id="keyNotes" class="small-muted" style="margin:6px 0 0 18px;padding:0;">
+                    <!-- Populated by JS -->
+                </ul>
+            </div>
+
+            <h3 class="product-title" style="font-size:1.05rem;margin:8px 0;">Detailed Description</h3>
+            <div id="detailedDescription" class="notes"></div>
         </aside>
     </main>
 
@@ -266,63 +671,8 @@
         </div>
     </section>
 
-    <!-- Cart modal & checkout modal used by main.js (kept minimal so main.js can operate) -->
-    <div id="cartModalBg" class="cart-modal-bg" aria-hidden="true">
-        <div class="cart-modal-content" id="cartModal" role="dialog" aria-modal="true" aria-label="Cart">
-            <button id="cartModalCloseBtn" class="cart-modal-close" aria-label="Close cart">✕</button>
-            <div class="cart-modal-header">Shopping Cart</div>
-            <div id="cartDiscountInfo" class="discount-info" style="display:none;"></div>
-            <div id="cartList" class="cart-list" aria-live="polite"></div>
-            <div class="cart-modal-footer">
-                <div id="cartModalTotal" class="cart-modal-total"></div>
-                <div style="flex:1"></div>
-                <a id="openCheckoutFromCart" class="btn-primary" href="{{ url_for('main.checkout') }}">Checkout</a>
-            </div>
-        </div>
-    </div>
-
-    <div id="checkoutModalBg" class="cart-modal-bg" aria-hidden="true">
-        <div id="checkoutModalContent" class="cart-modal-content" role="dialog" aria-modal="true" aria-label="Checkout">
-            <button id="checkoutModalCloseBtn" aria-label="Close checkout" class="cart-modal-close">✕</button>
-            <h2>Checkout</h2>
-            <div id="checkoutDiscountInfo" class="discount-info" style="display:none"></div>
-            <div id="cartSection" aria-live="polite"></div>
-
-            <!-- Payment selection removed from product page. Payment controls and PayPal rendering
-                 should be implemented in cart.html / checkout.html / paypal.js. -->
-
-            <form id="orderForm" style="margin-top:12px;">
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-                    <input id="customer" name="customer" placeholder="Full name" required
-                        style="padding:8px;border:1px solid #ddd;border-radius:6px;">
-                    <input id="email" name="email" type="email" placeholder="Email" required
-                        style="padding:8px;border:1px solid #ddd;border-radius:6px;">
-                    <input id="phone" name="phone" type="text" placeholder="Phone"
-                        style="padding:8px;border:1px solid #ddd;border-radius:6px;">
-                    <input id="date" name="date" type="datetime-local"
-                        style="padding:8px;border:1px solid #ddd;border-radius:6px;">
-                </div>
-                <div style="margin-top:10px;">
-                    <textarea id="address" name="address" rows="3" placeholder="Shipping address"
-                        style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;"></textarea>
-                </div>
-                <div id="orderMsg" style="margin-top:10px;"></div>
-                <div class="form-buttons" style="margin-top:12px;">
-                    <button id="checkoutBtn" type="submit" class="btn btn-primary">Place Order</button>
-                    <!-- modal Buy Now and modal PayPal container removed; payment handled in checkout/cart pages -->
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Order confirmation modal -->
-    <div id="orderConfirmationModalBg" class="cart-modal-bg" style="display:none;">
-        <div id="orderConfirmationModalContent" class="cart-modal-content" style="max-width:400px;text-align:center;">
-            <button id="orderConfirmationModalCloseBtn" title="Close"
-                style="position:absolute;top:10px;right:18px;font-size:1.5em;background:none;border:none;cursor:pointer;">&times;</button>
-            <div id="orderConfirmationMsg" style="margin:40px 0 15px 0;"></div>
-        </div>
-    </div>
+    <!-- NOTE: Embedded checkout modal and checkout script have been removed from this template
+         to deactivate the "Buy Now" CTA and avoid any navigation to a checkout page. -->
 
     <!-- Footer -->
     <footer class="main-footer">
@@ -340,14 +690,27 @@
         <div class="footer-bottom">&copy; WPerfumes</div>
     </footer>
 
-    <!-- Shared site script (main.js) - this wires up modals and cart UI -->
+    <!-- Shared site script (main.js) - this wires up site modals & site UI where applicable -->
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 
+    <!-- Provide server-rendered values for static JS (placeholder image) -->
+    <script>
+        window.PLACEHOLDER_IMAGE = "{{ url_for('static', filename='images/placeholder.jpg') }}";
+    </script>
+
+    <!-- Brand page product loader (existing inline script kept) -->
     <script>
         (function () {
             // Safe helpers
             const API = "/api";
             const placeholder = "{{ url_for('static', filename='images/placeholder.jpg') }}";
+            const LIKES_KEY = 'likes';
+
+            // parse query params so fetchProduct() can use them
+            const _urlParams = new URLSearchParams(window.location.search);
+            const productIdParam = _urlParams.get('product_id') || '';
+            const productParam = _urlParams.get('product') || '';
+            const brandParam = _urlParams.get('brand') || '';
 
             function toStaticUrl(url) {
                 if (!url) return placeholder;
@@ -359,12 +722,54 @@
                 return `$${(Number(n) || 0).toFixed(2)}`;
             }
 
-            // Read query params to identify which product to load (brand & product)
-            const params = new URLSearchParams(window.location.search);
-            const brandParam = params.get('brand') || '';
-            const productParam = params.get('product') || '';
-            // Prefer explicit product_id when present (this fixes ambiguity introduced by title-slugs)
-            const productIdParam = params.get('product_id') || '';
+            // Likes helpers (local)
+            function getLikes() {
+                try { return JSON.parse(localStorage.getItem(LIKES_KEY) || '[]'); } catch (e) { return []; }
+            }
+            function saveLikes(v) { try { localStorage.setItem(LIKES_KEY, JSON.stringify(v || [])); } catch (e) { } }
+            function findLikeIndexById(arr, id) { return arr.findIndex(i => ('' + i.id) === ('' + id)); }
+            function isLiked(id) { if (!id) return false; return findLikeIndexById(getLikes(), id) >= 0; }
+            function likeObjectForProduct(prod) {
+                if (!prod) return null;
+                const id = prod.id || prod.product_id || prod._id || prod.title || (new Date().getTime());
+                return {
+                    id: id,
+                    title: prod.title || prod.name || (document.getElementById('productTitle') ? document.getElementById('productTitle').textContent : 'Product'),
+                    brand: prod.brand || (document.getElementById('productBrand') ? document.getElementById('productBrand').textContent : ''),
+                    price: Number(prod.price || prod.unit_price || prod.amount || 0) || 0,
+                    image: prod.image || prod.image_url || (document.getElementById('mainImage') ? document.getElementById('mainImage').src : '')
+                };
+            }
+            function toggleLikeProduct(prod) {
+                if (!prod) return false;
+                const obj = likeObjectForProduct(prod);
+                if (!obj) return false;
+                const arr = getLikes();
+                const idx = findLikeIndexById(arr, obj.id);
+                let added = false;
+                if (idx >= 0) {
+                    arr.splice(idx, 1);
+                } else {
+                    arr.unshift(obj);
+                    added = true;
+                }
+                saveLikes(arr);
+                updateLikesBadge();
+                renderLikesPanelContents();
+                return added;
+            }
+
+            function updateLikesBadge() {
+                const badge = document.getElementById('likesCountBadge');
+                if (!badge) return;
+                const count = getLikes().length || 0;
+                if (count > 0) {
+                    badge.style.display = 'inline-flex';
+                    badge.textContent = String(count);
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
 
             // UI elements
             const mainImage = document.getElementById('mainImage');
@@ -376,26 +781,28 @@
             const priceDiscount = document.getElementById('priceDiscount');
             const descEl = document.getElementById('productDescription');
             const qtyEl = document.getElementById('qty');
-            const addToCartBtn = document.getElementById('addToCartBtn');
-            const buyNowBtn = document.getElementById('buyNowBtn');
+            const buyNowBtnPage = document.getElementById('buyNowBtnPage');
+            const addToCartBtn = document.getElementById('addToCartBtn'); // present but disabled
             const actionMsg = document.getElementById('productActionMsg');
             const suggestedTrack = document.getElementById('suggestedTrack');
+            const productLikeBtn = document.getElementById('productLikeBtn');
+            const likesBtn = document.getElementById('likesBtn');
+            const likesPanel = document.getElementById('likesPanel');
 
             let productData = null;
+            // expose currentProduct to integrations
+            window.currentProduct = null;
 
             async function fetchProduct() {
                 try {
-                    // If product_id provided, use the authoritative "by id" endpoint.
                     if (productIdParam) {
                         const resId = await fetch(`${API}/product_by_id?product_id=${encodeURIComponent(productIdParam)}`);
                         if (resId.ok) {
                             const jsid = await resId.json();
                             return jsid;
                         }
-                        // if product_id failed, fallthrough to try by brand+slug.
                     }
 
-                    // fallback: use brand + product slug/title
                     if (productParam) {
                         const apiUrl = `${API}/product?brand=${encodeURIComponent(brandParam)}&product=${encodeURIComponent(productParam)}`;
                         const res = await fetch(apiUrl);
@@ -404,13 +811,11 @@
                         return js;
                     }
 
-                    // final fallback: try to get a first product from /products
                     const res2 = await fetch(`${API}/products`);
                     if (!res2.ok) return null;
                     const list = await res2.json();
                     return list && list[0] ? list[0] : null;
                 } catch (err) {
-                    // fallback: try public products endpoint
                     try {
                         const res2 = await fetch(`${API}/products`);
                         if (!res2.ok) return null;
@@ -430,6 +835,7 @@
                     return;
                 }
                 productData = p;
+                window.currentProduct = p;
                 titleEl.textContent = p.title || p.name || 'Untitled';
                 brandEl.textContent = p.brand || '';
                 const priceVal = parseFloat(p.price || 0);
@@ -460,83 +866,24 @@
                     const img = document.createElement('img');
                     img.src = toStaticUrl(src);
                     img.alt = `${p.title} ${idx + 1}`;
-                    img.addEventListener('click', () => { mainImage.src = img.src; });
+                    img.addEventListener('click', () => {
+                        mainImage.src = img.src;
+                        thumbsContainer.querySelectorAll('img').forEach(x => x.classList.remove('selected'));
+                        img.classList.add('selected');
+                    });
                     thumbsContainer.appendChild(img);
                 });
+
+                // reflect like state on main like button if present
+                if (productLikeBtn) {
+                    const liked = isLiked(p.id || p.product_id || p.title);
+                    productLikeBtn.classList.toggle('liked', liked);
+                }
+
+                updateLikesBadge();
             }
 
-            // add to cart behaviour
-            addToCartBtn.addEventListener('click', function () {
-                const qty = Math.max(1, parseInt(qtyEl.value || '1', 10));
-                let cart = JSON.parse(localStorage.getItem('cart') || '[]');
-                const id = productData && productData.id ? productData.id : (productIdParam || productParam || (new Date()).getTime().toString());
-                const existing = cart.find(i => ('' + i.id) === ('' + id));
-                const image = (productData && productData.image_url) ? toStaticUrl(productData.image_url) : (mainImage.src || toStaticUrl(''));
-                if (existing) {
-                    existing.quantity = (existing.quantity || 0) + qty;
-                } else {
-                    cart.push({
-                        id: id,
-                        title: productData.title || productData.name || '',
-                        brand: productData.brand || '',
-                        price: Number(productData.price || 0),
-                        image: image,
-                        quantity: qty
-                    });
-                }
-                localStorage.setItem('cart', JSON.stringify(cart));
-                // best-effort notify server about order attempt (non-blocking)
-                try {
-                    fetch(`${API}/order-attempts`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email: '', product: productData.title || '', qty: qty, status: 'Carted' })
-                    }).catch(() => { });
-                } catch (e) { }
-
-                actionMsg.textContent = 'Added to cart';
-                actionMsg.style.color = '#27ae60';
-                // open checkout modal using the site's shared function from main.js if available
-                if (typeof openCheckoutModal === 'function') {
-                    openCheckoutModal();
-                }
-            });
-
-            // Buy Now: simplified behavior — add to cart and open checkout flow (payments handled in checkout)
-            buyNowBtn.addEventListener('click', async function () {
-                const qty = Math.max(1, parseInt(qtyEl.value || '1', 10));
-
-                const item = {
-                    id: productData && productData.id ? productData.id : (productIdParam || productParam || (new Date()).getTime().toString()),
-                    title: productData.title || productData.name || '',
-                    unit_price: parseFloat(productData.price || 0) || 0,
-                    quantity: qty,
-                    currency: 'USD'
-                };
-
-                // store single-item checkout info for checkout page if needed (non-blocking)
-                try { localStorage.setItem('pending_buy_item', JSON.stringify(item)); } catch (e) { }
-
-                // add item to cart
-                let cart = JSON.parse(localStorage.getItem('cart') || '[]');
-                const id = item.id;
-                const existing = cart.find(i => ('' + i.id) === ('' + id));
-                if (existing) existing.quantity = (existing.quantity || 0) + item.quantity;
-                else cart.push({ id, title: item.title, brand: productData.brand || '', price: item.unit_price, image: mainImage.src || '', quantity: item.quantity });
-                localStorage.setItem('cart', JSON.stringify(cart));
-
-                actionMsg.textContent = 'Proceed to checkout';
-                actionMsg.style.color = '#000';
-
-                // open checkout modal or redirect to checkout page; actual payment UI lives on checkout/cart pages
-                if (typeof openCheckoutModal === 'function') {
-                    openCheckoutModal();
-                } else {
-                    window.location.href = '/checkout';
-                }
-            });
-
-            // Suggested products (simple fetch of 8 items)
+            // Suggested products (Add to Cart restored as disabled placeholder)
             async function loadSuggestions() {
                 try {
                     const res = await fetch(`${API}/products?limit=12`);
@@ -546,62 +893,207 @@
                     (list || []).forEach(p => {
                         const card = document.createElement('div');
                         card.className = 'product-card';
-                        const priceVal = parseFloat(p.price || 0);
-                        const discounted = (window.checkoutDiscountPercent || 0) ? (priceVal * (1 - window.checkoutDiscountPercent / 100)).toFixed(2) : null;
+
+                        // normalize values
+                        const titleSafe = (p.title || p.name || 'Untitled').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+                        const brandSafe = (p.brand || '').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+                        const rawPrice = parseFloat(p.price);
+                        const priceHtml = isNaN(rawPrice) ? '—' : ('$' + rawPrice.toFixed(2));
+
+                        // prefer product_id when available (deterministic)
+                        const href = p.id
+                            ? `/brand_detail?product_id=${encodeURIComponent(p.id)}`
+                            : `/brand_detail?brand=${encodeURIComponent(p.brand || '')}&product=${encodeURIComponent((p.title || p.name || '').replace(/ /g, '_'))}`;
+
+                        // Build card DOM using classed elements to allow CSS sizing (no inline fixed heights)
                         card.innerHTML = `
-                <a href="/brand_detail?brand=${encodeURIComponent(p.brand || '')}&product=${encodeURIComponent((p.title || p.name || '').replace(/ /g, '_'))}">
-                  <div style="padding:8px;text-align:center;">
-                    <img src="${toStaticUrl(p.image_url || '')}" alt="${p.title}" style="width:100%;height:160px;object-fit:contain;border-radius:6px;background:#fff;border:1px solid #eee;">
-                    <h4 style="font-size:0.95rem;margin:8px 0 4px;">${p.title}</h4>
-                    <div style="color:#888;font-size:0.9rem;">${p.brand || ''}</div>
-                  </div>
+                <a class="card-media" href="${href}">
+                    <img src="${toStaticUrl(p.image_url || '')}" alt="${titleSafe}">
                 </a>
-                <div style="padding:8px;display:flex;gap:8px;justify-content:space-between;align-items:center;">
-                  <div style="font-weight:700;color:#cc0000;">$${priceVal.toFixed(2)}</div>
-                  <button class="mini-buy btn btn-buy" data-id="${p.id}" data-title="${p.title}" data-price="${priceVal}" data-image="${p.image_url}">Buy</button>
+
+                <div class="card-body">
+                  <div class="meta">
+                    <h4>${titleSafe}</h4>
+                    <div class="brand">${brandSafe}</div>
+                  </div>
+
+                  <div class="card-footer">
+                    <div style="display:flex;justify-content:flex-start;align-items:center;gap:8px;">
+                      <div style="font-weight:700;color:#cc0000;font-size:0.92rem;">${priceHtml}</div>
+                    </div>
+
+                    <div class="suggestion-cta-row" role="group" aria-label="Suggestion actions">
+                      <button class="btn btn-buy suggestion-buy btn-disabled" type="button" aria-label="Buy Now" disabled
+                        title="Buy Now disabled on this page"
+                        data-id="${p.id || ''}" data-title="${titleSafe}" data-brand="${(p.brand || '')}" data-price="${isNaN(rawPrice) ? '' : rawPrice}" data-image="${p.image_url || ''}">
+                        Buy Now
+                      </button>
+
+                      <button class="btn btn-primary suggestion-add btn-disabled" type="button" aria-label="Add to Cart" disabled
+                        title="Add to Cart is disabled on this page"
+                        data-id="${p.id || ''}" data-title="${titleSafe}" data-brand="${(p.brand || '')}" data-price="${isNaN(rawPrice) ? '' : rawPrice}" data-image="${p.image_url || ''}">
+                        Add to Cart
+                      </button>
+                    </div>
+
+                    <div class="suggestion-msg" aria-live="polite"></div>
+                  </div>
                 </div>
             `;
-                        suggestedTrack.appendChild(card);
-                    });
-
-                    // attach mini-buy handlers
-                    document.querySelectorAll('.mini-buy').forEach(b => {
-                        b.addEventListener('click', function (e) {
-                            e.preventDefault(); e.stopPropagation();
-                            const id = this.getAttribute('data-id') || new Date().getTime();
-                            const title = this.getAttribute('data-title') || '';
-                            const price = parseFloat(this.getAttribute('data-price') || 0);
-                            const image = this.getAttribute('data-image') ? toStaticUrl(this.getAttribute('data-image')) : '';
-                            let cart = JSON.parse(localStorage.getItem('cart') || '[]');
-                            const existing = cart.find(i => ('' + i.id) === ('' + id));
-                            if (existing) existing.quantity = (existing.quantity || 0) + 1;
-                            else cart.push({ id, title, price, image, quantity: 1 });
-                            localStorage.setItem('cart', JSON.stringify(cart));
-                            if (typeof openCheckoutModal === 'function') openCheckoutModal();
+                        // append like overlay button
+                        const likeBtn = document.createElement('button');
+                        likeBtn.type = 'button';
+                        likeBtn.className = 'card-like-btn';
+                        likeBtn.setAttribute('aria-label', 'Like product');
+                        likeBtn.title = 'Like';
+                        const pid = p.id || p.product_id || p.title || (new Date().getTime());
+                        if (isLiked(pid)) likeBtn.classList.add('liked');
+                        likeBtn.innerHTML = '<span aria-hidden="true">♡</span>';
+                        likeBtn.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const added = toggleLikeProduct({
+                                id: p.id || p.product_id,
+                                title: p.title || p.name,
+                                brand: p.brand,
+                                price: p.price,
+                                image: p.image || p.image_url
+                            });
+                            likeBtn.classList.toggle('liked', added);
                         });
-                    });
 
+                        suggestedTrack.appendChild(card);
+                        card.appendChild(likeBtn);
+
+                        // Note: Add-to-Cart restored in markup as a disabled placeholder (no cart_integration.js is loaded).
+                    });
                 } catch (err) {
                     console.warn('loadSuggestions failed', err);
                 }
             }
 
-            // On load, fetch the product and suggestions
+            function renderLikesPanelContents() {
+                if (!likesPanel) return;
+                const list = getLikes();
+                if (!list || list.length === 0) {
+                    likesPanel.innerHTML = '<div style="padding:10px;color:#666;">No likes yet.</div>';
+                    return;
+                }
+                likesPanel.innerHTML = '';
+                list.forEach(item => {
+                    const row = document.createElement('div');
+                    row.className = 'like-row';
+                    const img = document.createElement('img');
+                    img.src = toStaticUrl(item.image || placeholder);
+                    img.alt = item.title || 'Liked product';
+                    const meta = document.createElement('div');
+                    meta.className = 'meta';
+                    const t = document.createElement('div');
+                    t.className = 'title';
+                    t.textContent = item.title || '';
+                    const b = document.createElement('div');
+                    b.className = 'brand';
+                    b.textContent = item.brand || '';
+                    meta.appendChild(t);
+                    meta.appendChild(b);
+
+                    const removeBtn = document.createElement('button');
+                    removeBtn.type = 'button';
+                    removeBtn.className = 'btn btn-primary';
+                    removeBtn.style.minWidth = '56px';
+                    removeBtn.textContent = 'Remove';
+                    removeBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const arr = getLikes();
+                        const idx = findLikeIndexById(arr, item.id);
+                        if (idx >= 0) {
+                            arr.splice(idx, 1);
+                            saveLikes(arr);
+                            updateLikesBadge();
+                            renderLikesPanelContents();
+                            // update any like buttons on the page
+                            document.querySelectorAll('.card-like-btn, .product-like-btn').forEach(el => {
+                                const pid = el.closest('.product-card') ? el.closest('.product-card').getAttribute('data-id') : null;
+                                if (pid && pid === item.id) el.classList.remove('liked');
+                            });
+                        }
+                    });
+
+                    row.appendChild(img);
+                    row.appendChild(meta);
+                    row.appendChild(removeBtn);
+                    likesPanel.appendChild(row);
+                });
+            }
+
+            // handle likes panel toggle
+            if (likesBtn) {
+                likesBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (!likesPanel) return;
+                    const visible = likesPanel.style.display === 'block';
+                    if (visible) {
+                        likesPanel.style.display = 'none';
+                        likesPanel.setAttribute('aria-hidden', 'true');
+                    } else {
+                        renderLikesPanelContents();
+                        likesPanel.style.display = 'block';
+                        likesPanel.setAttribute('aria-hidden', 'false');
+                    }
+                });
+                // close panel on outside click
+                document.addEventListener('click', (ev) => {
+                    if (!likesPanel) return;
+                    if (!likesPanel.contains(ev.target) && !likesBtn.contains(ev.target)) {
+                        likesPanel.style.display = 'none';
+                        likesPanel.setAttribute('aria-hidden', 'true');
+                    }
+                });
+            }
+
+            // Attach main product like handler (productLikeBtn)
+            if (productLikeBtn) {
+                productLikeBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (!productData) return;
+                    const added = toggleLikeProduct(productData);
+                    productLikeBtn.classList.toggle('liked', added);
+                });
+            }
+
             (async function init() {
-                // Ensure global discount loaded if main.js provides it
                 if (typeof fetchDiscountPercent === 'function') {
                     try { await fetchDiscountPercent(); } catch (e) { /* ignore */ }
                 }
                 const p = await fetchProduct();
                 renderProduct(p);
-                loadSuggestions();
+                await loadSuggestions();
+                updateLikesBadge();
 
-                // NOTE: All payment rendering and card/PayPal integrations were intentionally removed
-                // from this product page and its JS. Payment UI should be implemented in cart.html,
-                // checkout.html and in the dedicated paypal.js helper so the checkout flow is centralized.
+                // Deactivate page Buy Now (defensive)
+                try {
+                    if (buyNowBtnPage) {
+                        buyNowBtnPage.disabled = true;
+                        buyNowBtnPage.classList.add('btn-disabled');
+                        buyNowBtnPage.setAttribute('aria-disabled', 'true');
+                        buyNowBtnPage.title = 'Buy Now disabled on this page';
+                        buyNowBtnPage.addEventListener('click', function (ev) {
+                            ev.preventDefault();
+                            const msg = document.getElementById('productActionMsg');
+                            if (msg) {
+                                msg.textContent = 'Buy Now is disabled on this page.';
+                                setTimeout(() => { try { msg.textContent = ''; } catch (e) { } }, 2500);
+                            }
+                        }, true);
+                    }
+                } catch (e) { /* ignore */ }
             })();
         })();
     </script>
+
+    <!-- NOTE: cart_integration.js removed from this template to fully deactivate functional Add-to-Cart behavior.
+         The Add to Cart buttons are present as disabled placeholders in the UI. -->
 
     <!-- Optional: Font Awesome for icons (deferred) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"

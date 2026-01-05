@@ -305,9 +305,7 @@
                     <h4 style="margin-top:0;margin-bottom:8px;">Order Summary</h4>
                     <div id="modalCartSummary" aria-live="polite"></div>
 
-                    <!-- PayPal button for modal checkout -->
-                    <div id="modal_paypal_button_container" style="margin-top:10px;"></div>
-
+                    <!-- PayPal / payment integration is handled on the checkout page; modal only displays order summary -->
                     <div style="margin-top:10px;">
                         <label for="modal_promo_code" style="font-weight:700;margin-bottom:6px;display:block;">Promo
                             Code</label>
@@ -323,6 +321,14 @@
                     </div>
                 </aside>
             </div>
+        </div>
+    </div>
+
+    <div id="orderConfirmationModalBg" class="cart-modal-bg" style="display:none;">
+        <div id="orderConfirmationModalContent" class="cart-modal-content" style="max-width:400px;text-align:center;">
+            <button id="orderConfirmationModalCloseBtn" title="Close"
+                style="position:absolute;top:10px;right:18px;font-size:1.5em;background:none;border:none;cursor:pointer;">&times;</button>
+            <div id="orderConfirmationMsg" style="margin:40px 0 15px 0;"></div>
         </div>
     </div>
 
@@ -692,112 +698,6 @@
             renderModalCartSummary();
         }
 
-        function openCheckoutModal(e) {
-            if (e) e.preventDefault();
-            fetchDiscountPercent().then(() => {
-                loadActivePromosInto().then(() => {
-                    renderModalCartSummary();
-                    // show the modal
-                    document.getElementById('checkoutBackdrop').style.display = 'flex';
-                    document.getElementById('checkoutBackdrop').setAttribute('aria-hidden', 'false');
-
-                    // Render PayPal buttons now that the container is visible.
-                    try {
-                        if (window.paypal && document.querySelector('#modal_paypal_button_container')) {
-                            const container = document.querySelector('#modal_paypal_button_container');
-                            if (!container.innerHTML.trim()) {
-                                renderPayPalButtons('#modal_paypal_button_container', { currency: '{{ PAYPAL_CURRENCY }}', successUrl: '/' });
-                            }
-                        }
-                    } catch (err) {
-                        console.warn('PayPal render attempt failed', err);
-                    }
-
-                    setTimeout(() => document.getElementById('modal_customer').focus(), 50);
-                });
-            });
-        }
-
-        function closeCheckoutModal() {
-            document.getElementById('checkoutBackdrop').style.display = 'none';
-            document.getElementById('checkoutBackdrop').setAttribute('aria-hidden', 'true');
-        }
-
-        async function logOrderAttempt(item, status = "Carted") {
-            try {
-                await fetch(`${API}/order-attempts`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        email: "",
-                        product: item.title || item.name || "",
-                        qty: item.quantity || item.qty || 1,
-                        status
-                    })
-                });
-            } catch (e) {
-                // Ignore logging failures
-            }
-        }
-
-        async function submitOrdersFromModal(customer, email, phone, address, payment_method, promo_code, date) {
-            const cartLocal = JSON.parse(localStorage.getItem('cart') || "[]");
-            if (!cartLocal || !cartLocal.length) return { success: false, message: 'Cart empty' };
-            const results = [];
-            for (const item of cartLocal) {
-                const payload = {
-                    customer_name: customer,
-                    customer_email: email,
-                    customer_phone: phone,
-                    customer_address: address,
-                    product_id: item.id || item.product_id || '',
-                    product_title: item.title || item.name || '',
-                    quantity: item.quantity || item.qty || 1,
-                    status: "Pending",
-                    payment_method: payment_method || "Cash on Delivery",
-                    date: date || (new Date().toISOString().slice(0, 19).replace('T', ' '))
-                };
-                if (promo_code) payload.promo_code = promo_code;
-
-                try {
-                    const res = await fetch(`${API}/orders`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(payload)
-                    });
-                    if (!res.ok) {
-                        const text = await res.text().catch(() => res.statusText);
-                        results.push({ ok: false, message: text || `HTTP ${res.status}` });
-                    } else {
-                        results.push({ ok: true });
-                    }
-                } catch (e) {
-                    results.push({ ok: false, message: e.message });
-                }
-            }
-            return results;
-        }
-
-        async function logOrderAttemptsForCart(status = 'CheckedOut') {
-            const cartLocal = JSON.parse(localStorage.getItem('cart') || "[]") || [];
-            for (const item of cartLocal) {
-                try {
-                    await fetch(`${API}/order-attempts`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            email: "",
-                            product: item.title || item.name || "",
-                            qty: item.quantity || item.qty || 1,
-                            status
-                        })
-                    });
-                } catch (e) {
-                    // ignore
-                }
-            }
-        }
-
         document.getElementById('modalOrderForm').addEventListener('submit', async function (e) {
             e.preventDefault();
             const customer = document.getElementById('modal_customer').value || '';
@@ -913,6 +813,40 @@
             await loadActivePromosInto();
             renderModalCartSummary();
         }, 30000);
+    </script>
+
+    <!-- NEW: Keep the cart page in sync with cart changes made elsewhere (same tab or other tabs).
+         Listens for the custom 'cart:updated' event dispatched by cart_integration.js, the storage event,
+         and pageshow (BFCache) to re-render the cart UI immediately without requiring a manual refresh. -->
+    <script>
+        (function () {
+            function refreshCartUI() {
+                try {
+                    if (typeof renderCart === 'function') renderCart();
+                    if (typeof renderModalCartSummary === 'function') renderModalCartSummary();
+                } catch (e) {
+                    console.warn('refreshCartUI error', e);
+                }
+            }
+
+            // Custom event dispatched by cart_integration.js in the same tab after writes
+            window.addEventListener('cart:updated', function () {
+                refreshCartUI();
+            });
+
+            // storage events from other tabs/windows
+            window.addEventListener('storage', function (e) {
+                if (e.key === 'cart') refreshCartUI();
+            });
+
+            // pageshow fires when the page is loaded or restored from BFCache
+            window.addEventListener('pageshow', function (e) {
+                refreshCartUI();
+            });
+
+            // Also refresh once when script runs to cover timing issues
+            document.addEventListener('DOMContentLoaded', refreshCartUI);
+        })();
     </script>
 </body>
 

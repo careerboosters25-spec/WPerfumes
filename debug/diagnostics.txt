@@ -1,0 +1,83 @@
+=== Date & Host ===
+Mon Jan  5 12:26:14 EAST 2026
+MINGW64_NT-10.0-19045 DESKTOP-GQCQB8H 3.6.5-22c95533.x86_64 2025-10-10 12:02 UTC x86_64 Msys
+
+=== Git remotes & branch ===
+main
+origin	https://github.com/careerboosters25-spec/WPerfumes.git (fetch)
+origin	https://github.com/careerboosters25-spec/WPerfumes.git (push)
+## main...origin/main
+ M app/routes.py
+ M app/static/css/brand_detail.css
+ M app/static/js/brand_detail.js
+ M app/templates/brand_detail.html
+ M app/templates/cart.html
+ D app/templates/checkout.html
+ M flask.log
+?? app/static/css/cart_integration.css
+?? app/static/images/alpha/
+?? app/static/js/cart_integration.js
+?? debug/
+?? flask.pid
+?? products.json
+?? products_http.txt
+
+=== Top-level files ===
+total 347
+-rw-r--r-- 1 Makori 197121 16465 Dec 25 14:20  --date=iso
+-rw-r--r-- 1 Makori 197121 16465 Dec 25 14:21  --date=iso# WARNING: slow on large repos, but finds occurrences in any commit blob
+drwxr-xr-x 1 Makori 197121     0 Jan  5 12:26 ./
+drwxr-xr-x 1 Makori 197121     0 Jan  5 12:20 ../
+drwxr-xr-x 1 Makori 197121     0 Jan  5 12:26 .git/
+-rw-r--r-- 1 Makori 197121   375 Dec 30 18:07 .gitignore
+-rw-r--r-- 1 Makori 197121  8748 Dec  7 18:04 .tmp_api_all.raw
+-rw-r--r-- 1 Makori 197121  2364 Dec  7 18:04 .tmp_api_default.raw
+drwxr-xr-x 1 Makori 197121     0 Dec  7 17:52 .tmp_debug_payments/
+-rw-r--r-- 1 Makori 197121  7159 Dec  7 18:03 .tmp_payments_admin_page.html
+drwxr-xr-x 1 Makori 197121     0 Dec  7 17:58 .tmp_payments_ui/
+drwxr-xr-x 1 Makori 197121     0 Dec 25 07:50 .venv/
+-rw-r--r-- 1 Makori 197121  1741 Dec 25 18:58 Dockerfile
+-rw-r--r-- 1 Makori 197121     0 Dec 25 13:44 Procfile
+-rw-r--r-- 1 Makori 197121  5274 Dec 23 15:10 README.md
+drwxr-xr-x 1 Makori 197121     0 Dec 25 07:50 __pycache__/
+drwxr-xr-x 1 Makori 197121     0 Dec 26 09:04 app/
+drwxr-xr-x 1 Makori 197121     0 Dec 25 13:51 backups/
+-rwxr-xr-x 1 Makori 197121  1422 Dec 23 16:46 check_db_connection.py*
+-rw-r--r-- 1 Makori 197121   207 Nov 23 12:59 client-config.json
+-rw-r--r-- 1 Makori 197121   238 Dec  7 18:03 cookies.txt
+-rw-r--r-- 1 Makori 197121   207 Nov 23 13:59 create-order.json
+-rw-r--r-- 1 Makori 197121    64 Nov 25 09:48 create_db_run.log
+drwxr-xr-x 1 Makori 197121     0 Jan  5 12:26 debug/
+-rw-r--r-- 1 Makori 197121  1437 Nov 25 09:45 debug_db.log
+drwxr-xr-x 1 Makori 197121     0 Dec 25 07:48 debug_out/
+drwxr-xr-x 1 Makori 197121     0 Dec 25 13:51 dev-scripts/
+-rwxr-xr-x 1 Makori 197121  2199 Dec 25 11:36 fix_empty_sequences.sh*
+-rw-r--r-- 1 Makori 197121 84577 Jan  5 09:55 flask.log
+-rw-r--r-- 1 Makori 197121  1639 Dec  7 18:25 flask.out
+-rw-r--r-- 1 Makori 197121     4 Jan  5 08:29 flask.pid
+-rw-r--r-- 1 Makori 197121 42788 Nov 23 13:08 flask_startup.log
+drwxr-xr-x 1 Makori 197121     0 Dec 25 14:35 instance/
+-rw-r--r-- 1 Makori 197121   357 Dec 26 08:22 koyeb-secrets.env
+drwxr-xr-x 1 Makori 197121     0 Dec 25 07:48 logs/
+drwxr-xr-x 1 Makori 197121     0 Dec 25 07:48 migrations/
+-rw-r--r-- 1 Makori 197121  1669 Nov 23 12:50 paypal-oauth.json
+-rw-r--r-- 1 Makori 197121 12288 Dec 17 14:09 price_history.db
+-rw-r--r-- 1 Makori 197121   722 Dec 17 13:40 price_results.csv
+-rwxr-xr-x 1 Makori 197121   806 Dec 23 16:45 print_db_uri.py*
+-rw-r--r-- 1 Makori 197121 21649 Jan  5 08:29 products.json
+-rw-r--r-- 1 Makori 197121    72 Jan  5 08:22 products_http.txt
+-rw-r--r-- 1 Makori 197121  4481 Dec 23 15:12 pushTogithub.sh
+-rwxr-xr-x 1 Makori 197121  4244 Dec 24 09:44 render_fix_db.py*
+-rw-r--r-- 1 Makori 197121   390 Dec 17 22:38 requirements.txt
+-rwxr-xr-x 1 Makori 197121  1762 Oct 21 17:24 run-local.sh*
+-rw-r--r-- 1 Makori 197121   259 Dec 17 22:38 run.py
+drwxr-xr-x 1 Makori 197121     0 Dec 25 18:54 scripts/
+drwxr-xr-x 1 Makori 197121     0 Dec 25 07:48 static/
+-rwxr-xr-x 1 Makori 197121  2875 Dec 25 11:32 sync_sequences_safe.sh*
+-rw-r--r-- 1 Makori 197121  2243 Dec 25 14:20 tatus --ignored -s
+drwxr-xr-x 1 Makori 197121     0 Dec 25 07:48 tests/
+drwxr-xr-x 1 Makori 197121     0 Dec 25 07:48 tools/
+-rw-r--r-- 1 Makori 197121   480 Dec 17 13:54 urls.txt
+
+=== Framework detection ===
+

@@ -338,6 +338,8 @@ main {
     font-size: 14px;
 }
 
+/* ==== CTA SIZE ADJUSTMENTS (increased by ~20%) ==== */
+/* Base product price and main CTAs are increased by 20% for better visual balance */
 #productPrice {
     font-size: 20px;
     color: var(--sale-red);
@@ -358,12 +360,13 @@ main {
     gap: 18px;
 }
 
+/* .cta-button was 10px 18px — increase by 20% -> approx 12px 22px */
 .cta-button {
     display: inline-flex;
     align-items: center;
     gap: 10px;
     border-radius: 8px;
-    padding: 10px 18px;
+    padding: 12px 22px;
     background: var(--accent);
     color: var(--primary-white);
     border: none;
@@ -377,11 +380,12 @@ main {
     transform: translateY(-1px);
 }
 
+/* .cta-secondary increased from 9px 14px -> approx 11px 17px */
 .cta-secondary {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 9px 14px;
+    padding: 11px 17px;
     border-radius: 8px;
     background: #f0f0f0;
     border: 1px solid #e6e6e6;
@@ -483,6 +487,7 @@ main {
     transition: transform 0.24s ease;
 }
 
+/* fallback small slider-card styles left for compatibility */
 .slider-card {
     width: 140px;
     flex: 0 0 140px;
@@ -505,105 +510,364 @@ main {
 .slider-card .slider-title {
     font-weight: 700;
     font-size: 13px;
-    color: #333;
 }
 
-/* Footer
-   Use .site-footer to align with the site container above. */
-.site-footer {
-    padding: 18px 0;
-    color: var(--dark-text);
-    font-size: 0.95rem;
-    background: var(--light-brown);
-    border-top: 1px solid var(--light-silver);
-}
-
-/* footer inner container should fill the site-container width */
-.site-footer .footer-inner,
-.site-footer .footer-container {
-    width: 100%;
-    margin: 0;
-    padding: 0 var(--container-padding);
+/* Product card layout for the suggestion slider (CTA-enabled cards) */
+.slider-track .product-card {
+    width: 220px;
+    flex: 0 0 auto;
+    transition: transform 160ms ease;
     display: flex;
-    gap: 18px;
-    flex-wrap: wrap;
+    flex-direction: column;
+    height: 340px;
+    /* fixed equal height that accommodates CTAs */
+    box-sizing: border-box;
+    background: linear-gradient(180deg, #fff, #fbfcff);
+    border-radius: 10px;
+    overflow: visible;
+    /* allow focus outlines / shadows to be visible if needed */
+    border: 1px solid rgba(12, 30, 45, 0.04);
+    box-shadow: 0 6px 18px rgba(12, 30, 45, 0.04);
+    padding: 0;
+    min-height: 0;
 }
 
-/* Responsive
-   Criteria: keep three-column layout on desktop, stack for narrower devices. */
-@media (max-width: 1100px) {
-    .main-product-row {
-        gap: 18px;
-    }
-
-    .details-section {
-        max-width: 320px;
-        min-width: 0;
-        padding-left: 12px;
-    }
-
-    .image-section {
-        max-width: 210px;
-    }
+.slider-track .product-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 14px 34px rgba(12, 30, 45, 0.08);
 }
 
-/* Stack vertically on small screens only */
-@media (max-width: 900px) {
-    .main-product-row {
-        flex-direction: column;
-        gap: 16px;
-        /* allow items to wrap/stack on smaller widths */
-        flex-wrap: wrap;
-    }
+.product-card .card-media {
+    flex: 0 0 160px;
+    /* slightly reduced media area so remaining body fits */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    background: #fff;
+    box-sizing: border-box;
+}
 
-    .details-section,
-    .image-section,
-    .info-section {
-        max-width: 100%;
-        min-width: 0;
-        padding-left: 0;
-        border-left: none;
-        border-radius: 18px;
-    }
+.product-card .card-media img {
+    width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 6px;
+    background: #fff;
+    border: 1px solid #eee;
+    box-sizing: border-box;
+}
 
-    .details-section {
-        margin-top: 18px;
-        background: #f7f8fa;
-    }
+.product-card .card-body {
+    flex: 1 1 auto;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 6px;
+    box-sizing: border-box;
+    min-height: 0;
+    /* allow proper flex shrink */
+}
 
-    .thumbnails-col {
-        flex-direction: row;
-        gap: 8px;
-    }
+.product-card .meta {
+    display: block;
+}
+
+.product-card .meta h4 {
+    font-size: 0.88rem;
+    margin: 2px 0 4px;
+    line-height: 1.15;
+    max-height: 2.3em;
+    /* ~2 lines */
+    overflow: hidden;
+    word-break: break-word;
+}
+
+/* HIDE visible brand text inside suggestion cards.
+   Some renderers/templates may still output a .brand element;
+   hide it so the UI only shows product names. */
+.product-card .meta .brand,
+.slider-card .brand,
+.suggestion-card .brand {
+    display: none !important;
+    visibility: hidden;
+    height: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+.product-card .meta .brand {
+    /* keep accessible data attributes if needed, but do not display */
+    font-size: 0;
+    line-height: 0;
+    color: transparent;
+    pointer-events: none;
+}
+
+.product-card .meta .brand {
+    color: transparent;
+}
+
+.product-card .meta .brand::before {
+    content: "";
+}
+
+/* card-brand rule remains hidden; product names will be the only visible text */
+.product-card .meta .brand {
+    display: none;
+}
+
+.product-card .meta .brand {
+    display: none;
+}
+
+.product-card .meta .brand {
+    display: none;
+}
+
+.product-card .meta .brand {
+    display: none;
+}
+
+/* card footer, price and CTA styles continue below */
+.product-card .meta .brand {
+    display: none;
+}
+
+.product-card .meta .brand {
+    display: none;
+}
+
+.product-card .meta .brand {
+    display: none;
+}
+
+.product-card .card-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* Reduce the CTA buttons to 50% of their previous visual size earlier —
+   now we increase the suggestion CTAs by 20% relative to those values.
+   That brings them to a comfortable readable size while preserving layout. */
+
+/* suggestion CTAs: was padding 5px 6px, font-size 0.46rem
+   increase by 20% -> padding ~6px 8px, font-size ~0.55rem */
+.suggestion-cta-row {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    align-items: center;
+}
+
+.suggestion-cta-row .btn {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 6px 8px;
+    /* increased */
+    font-size: 0.55rem;
+    /* increased */
+    border-radius: 8px;
+}
+
+/* Slightly reduce buy/add individual variants so visuals remain balanced */
+.suggestion-cta-row .btn-buy {
+    padding: 6px 8px;
+    font-size: 0.55rem;
+    min-width: 0;
+    box-shadow: 0 6px 14px rgba(255, 107, 107, 0.12);
+}
+
+.suggestion-cta-row .btn-primary {
+    padding: 6px 8px;
+    font-size: 0.55rem;
+    min-width: 0;
+    box-shadow: 0 6px 14px rgba(46, 128, 99, 0.12);
+}
+
+.suggestion-msg {
+    color: #666;
+    font-size: 0.78rem;
+    min-height: 18px;
+    text-align: center;
+}
+
+/* Ensure main .btn styles are also increased by ~20% so CTAs are consistent site-wide */
+/* Base .btn was padding: 10px 12px, font-size: 0.92rem */
+.btn {
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    font-weight: 800;
+    font-size: 1.10rem;
+    transition: transform 120ms ease, box-shadow 120ms ease;
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+    min-width: 100px;
+}
+
+.btn:focus {
+    outline: 3px solid rgba(45, 143, 124, 0.14);
+    outline-offset: 2px;
+}
+
+/* btn-primary adjustments (increase padding/font-size by ~20%) */
+.btn-primary {
+    background: linear-gradient(90deg, var(--accent), #34b98f);
+    color: #fff;
+    box-shadow: 0 8px 20px rgba(46, 128, 99, 0.18);
+    font-weight: 800;
+    min-width: 95px;
+    padding: 12px 14px;
+    font-size: 1.10rem;
+}
+
+.btn-primary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 34px rgba(46, 128, 99, 0.22);
+}
+
+/* btn-buy adjustments (was font-size 0.96rem, padding 11px 14px) */
+.btn-buy {
+    background: linear-gradient(90deg, #ff6b6b, #ff8a6b);
+    color: #fff;
+    box-shadow: 0 10px 30px rgba(255, 107, 107, 0.18);
+    font-size: 1.15rem;
+    padding: 13px 17px;
+    min-width: 115px;
+}
+
+.btn-buy:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 16px 38px rgba(255, 107, 107, 0.22);
+}
+
+/* Action message compact so it doesn't force wrapping */
+#productActionMsg {
+    margin-left: 8px;
+    color: #000;
+    font-weight: 700;
+    font-size: 0.95rem;
+    max-width: 220px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline-block;
+    flex: 0 0 auto;
 }
 
 @media (max-width: 600px) {
-    .product-image-wrapper {
-        height: 180px;
-        max-width: 90vw;
-    }
-
-    .thumbnail-img {
-        width: 38px;
-        height: 38px;
-    }
-
     .product-actions {
         flex-direction: column;
         align-items: stretch;
         gap: 10px;
     }
 
-    .info-section {
-        padding: 6px 0;
+    .action-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+        flex-wrap: wrap;
     }
 
-    .details-section {
-        padding: 6px 0;
+    #buyNowBtn {
+        order: -1;
     }
 
-    .thumbnails-col {
-        gap: 6px;
+    #addToCartBtn {
+        order: 0;
+    }
+
+    .btn {
+        width: 100%;
+        min-width: 0;
+        padding: 14px;
+        /* slightly larger to keep comfortable tap targets on mobile */
+        font-size: 1.04rem;
+    }
+
+    .btn-buy {
+        padding: 14px;
+        font-size: 1.2rem;
+    }
+
+    #productActionMsg {
+        max-width: 100%;
+        white-space: normal;
+        overflow: visible;
+        margin-left: 0;
+    }
+
+    /* Adjust suggestion buttons on small screens (increase ~20% from prior mobile sizes) */
+    .suggestion-cta-row .btn {
+        font-size: 0.6rem;
+        padding: 7px 10px;
+    }
+}
+
+.suggestion-msg {
+    color: #666;
+    font-size: 0.78rem;
+    min-height: 18px;
+    text-align: center;
+}
+
+/*
+ * Guarantee nothing inside the card is cropped:
+ * - Use smaller media area + text + reduced CTA size so content fits into height
+ * - Allow the product-card to increase slightly if still needed on very long titles
+ */
+.slider-track .product-card {
+    /* allow small growth if necessary while keeping widths equal */
+    max-height: 420px;
+}
+
+@media (max-width: 980px) {
+    .product-page {
+        grid-template-columns: 1fr;
+        padding: 16px;
+    }
+
+    .product-main-image {
+        height: 420px;
+    }
+
+    /* Reduce card height on smaller screens so layout fits */
+    .slider-track .product-card {
+        height: 300px;
+        max-height: 360px;
+    }
+
+    .product-card .card-media {
+        flex: 0 0 130px;
+    }
+
+    .suggestion-cta-row .btn {
+        font-size: 0.5rem;
+        /* slightly larger readable size on small screens after +20% */
+        padding: 6px 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    .slider-track .product-card {
+        width: 180px;
+        height: 280px;
+    }
+
+    .product-card .card-media {
+        flex: 0 0 120px;
+    }
+
+    .suggestion-cta-row .btn {
+        font-size: 0.65rem;
+        padding: 7px 10px;
     }
 }
 
@@ -619,4 +883,344 @@ main {
 
 .small {
     font-size: 13px;
+}
+
+/* ===== Likes UI styles (nav, overlays, panel) =====
+   Added to support the "Like" (heart) feature:
+   - Navbar likes button + badge
+   - Main product overlay heart
+   - Card overlay heart on suggestion cards
+   - Likes panel dropdown to view/remove liked items
+*/
+
+/* likes button in navbar (small button next to cart) */
+.likes-btn {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 10px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 14px;
+    background: transparent;
+    border: 1px solid transparent;
+    cursor: pointer;
+}
+
+/* Likes badge (re-uses cart badge look) */
+.likes-count-badge {
+    background: var(--sale-red);
+    color: var(--primary-white);
+    border-radius: 12px;
+    padding: 2px 6px;
+    font-size: 12px;
+    font-weight: 700;
+    margin-left: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Make product-card's card-media position relative so absolute like button sits correctly */
+.product-card .card-media {
+    position: relative;
+}
+
+/* Likes panel (simple dropdown-like panel that can show liked items) */
+.likes-panel {
+    position: absolute;
+    right: 12px;
+    top: 56px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(12, 30, 45, 0.12);
+    width: 320px;
+    max-height: 420px;
+    overflow: auto;
+    z-index: 200;
+    padding: 10px;
+    display: none;
+}
+
+.likes-panel .like-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 8px 6px;
+    border-bottom: 1px solid #f1f1f1;
+}
+
+.likes-panel .like-row img {
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: 6px;
+}
+
+.likes-panel .like-row .meta {
+    flex: 1 1 auto;
+}
+
+.likes-panel .like-row .meta .title {
+    font-weight: 700;
+}
+
+.likes-panel .like-row .meta .brand {
+    font-size: 0.9rem;
+    color: var(--muted);
+}
+
+/* small responsive tweaks for likes panel on narrow screens */
+@media (max-width: 480px) {
+    .likes-panel {
+        right: 8px;
+        left: 8px;
+        width: auto;
+    }
+}
+
+/* ===== Updated Like button sizing & rose color tweaks (requested) =====
+   Make the like icon in the product container twice the previous size and use rose color.
+   Also adjust per-card heart similarly.
+*/
+
+/* Main product like button (top-right overlay) */
+/* Previously used near-white background and font-size ~18px. Increase to twice size and use rose background. */
+.product-like-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    /* soft rose background instead of near-white */
+    background: #fff0f6;
+    /* very light rose */
+    border: 0;
+    /* bigger padding so the control remains a comfortable circular tap target */
+    padding: 10px 12px;
+    border-radius: 50%;
+    cursor: pointer;
+    /* twice the previous font-size (was 18px originally in earlier suggestion) */
+    font-size: 36px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    /* heart color (outlined/default) is medium rose */
+    color: #c2185b;
+    /* medium/deep rose */
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.06);
+    transition: transform 120ms ease, background 120ms, color 120ms;
+    z-index: 10;
+    min-width: 56px;
+    min-height: 56px;
+}
+
+.product-like-btn:hover {
+    transform: translateY(-2px) scale(1.02);
+}
+
+/* liked state: make the background a stronger rose and icon white for contrast */
+.product-like-btn.liked {
+    background: #ff5c8a;
+    /* stronger rose */
+    color: #ffffff;
+    box-shadow: 0 10px 26px rgba(197, 46, 113, 0.18);
+}
+
+/* Card like button (top-right corner of product card) */
+/* Twice the previous size and rose background instead of white */
+.card-like-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 12;
+    background: #fff0f6;
+    /* very light rose */
+    border: 0;
+    padding: 8px 10px;
+    border-radius: 50%;
+    cursor: pointer;
+    /* twice the previous font-size (previously ~14px) */
+    font-size: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #c2185b;
+    /* medium/deep rose */
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.06);
+    transition: transform 120ms ease, background 120ms, color 120ms;
+    min-width: 48px;
+    min-height: 48px;
+}
+
+.card-like-btn:hover {
+    transform: translateY(-2px) scale(1.03);
+}
+
+/* liked state for card hearts */
+.card-like-btn.liked {
+    background: #ff5c8a;
+    color: #ffffff;
+    box-shadow: 0 10px 26px rgba(197, 46, 113, 0.18);
+}
+
+/* card-like content (heart) */
+.card-like-btn span {
+    display: inline-block;
+    line-height: 1;
+}
+
+/* Ensure .product-card .card-media remains position: relative (already set above) */
+/* If some templates use .product-card without nested .card-media, keep overlay placement safe */
+.product-card {
+    position: relative;
+}
+
+/* --------------------
+   Cart panel & notification (appended)
+   -------------------- */
+
+/* Cart panel (dropdown) similar to likes-panel */
+.cart-panel {
+    position: absolute;
+    right: 12px;
+    top: 56px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(12, 30, 45, 0.12);
+    width: 360px;
+    max-height: 420px;
+    overflow: auto;
+    z-index: 220;
+    padding: 8px;
+    display: none;
+}
+
+/* cart row */
+.cart-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 8px 6px;
+    border-bottom: 1px solid #f1f1f1;
+}
+
+.cart-row img {
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: 6px;
+}
+
+.cart-row .meta {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.cart-row .meta .title {
+    font-weight: 700;
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cart-row .meta .brand {
+    font-size: 0.9rem;
+    color: var(--muted);
+}
+
+.cart-row .price {
+    font-weight: 700;
+    color: var(--sale-red);
+    min-width: 78px;
+    text-align: right;
+}
+
+/* qty control */
+.qty-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 8px;
+    padding: 4px;
+    background: #fff;
+    border: 1px solid #eee;
+}
+
+.qty-control button {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: 0;
+    background: #f5f5f5;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+.qty-control .qty-display {
+    min-width: 20px;
+    text-align: center;
+    font-weight: 700;
+}
+
+/* cart footer */
+.cart-footer {
+    padding: 8px 6px;
+    border-top: 1px solid #f1f1f1;
+    margin-top: 8px;
+}
+
+.cart-footer .cart-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    font-size: 1rem;
+}
+
+/* small navbar cart notification (transient) */
+.cart-notification {
+    position: absolute;
+    right: 120px;
+    top: 8px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
+    padding: 10px 12px;
+    z-index: 300;
+    opacity: 0;
+    transform: translateY(-6px);
+    transition: opacity 180ms ease, transform 180ms ease;
+    font-size: 0.92rem;
+}
+
+.cart-notification.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.cart-notification .cn-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.cart-notification .cn-product {
+    color: #444;
+    font-size: 0.95rem;
+}
+
+/* small responsive tweaks */
+@media (max-width: 600px) {
+    .cart-panel {
+        right: 8px;
+        left: 8px;
+        width: auto;
+    }
+
+    .cart-notification {
+        right: 12px;
+        left: 12px;
+        width: auto;
+    }
 }
