@@ -58,8 +58,10 @@ function renderPayPalButtons(containerSelector, opts = {}) {
         return;
     }
 
+    const defaultStyle = opts.style || { layout: 'vertical', color: 'gold', shape: 'rect', label: 'paypal' };
+
     const buttons = paypal.Buttons({
-        style: opts.style || { layout: 'vertical', color: 'gold', shape: 'rect', label: 'paypal' },
+        style: defaultStyle,
         createOrder: async function (data, actions) {
             const items = await fetchCartItems();
             const payload = { items, currency: opts.currency || 'USD' };
@@ -216,9 +218,12 @@ window.initiateCardCheckout = initiateCardCheckout;
 // Auto initialize for common container IDs
 document.addEventListener('DOMContentLoaded', function () {
     if (document.querySelector('#paypal-button-container')) {
+        // main checkout page PayPal button: default style
         renderPayPalButtons('#paypal-button-container', { currency: 'USD', successUrl: '/' });
     }
     if (document.querySelector('#modal_paypal_button_container')) {
-        renderPayPalButtons('#modal_paypal_button_container', { currency: 'USD', successUrl: '/' });
+        // popup modal PayPal button — reduce height to make icon smaller
+        const modalStyle = { layout: 'vertical', color: 'gold', shape: 'rect', label: 'paypal', height: 24 };
+        renderPayPalButtons('#modal_paypal_button_container', { currency: 'USD', successUrl: '/', style: modalStyle });
     }
 });

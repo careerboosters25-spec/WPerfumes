@@ -1,21 +1,41 @@
 // Checkout page JS (modularized). This file must be served as a static file (no Jinja here).
-// The template injects window.PLACEHOLDER_IMAGE for the placeholder image path.
-//
-// NOTE: This version adds:
-// - modal-scoped wiring for country/city controls so they appear and work inside the homepage "Buy Now" modal
-// - a compact single-line totals layout for modal (to save vertical space)
-// - initCheckoutModal() that initializes delivery providers, wiring and renders the cart inside the modal
-// - a click-delegation + mutation-observer approach to ensure modal contents are initialized when opened
+// Phase 0: client-side security & UX improvements implemented.
+// Phase 1: UI + delivery fee + quantity controls
+//  - reads /static/data/countries.json (global list)
+//  - quantity +/- controls (green +, red -) with event delegation
+//  - delivery fee = $3 (USD) shown as GBP primary and USD in brackets
+//  - totals calculated in GBP as primary currency; USD shown in brackets like subtotal/total
 
 (function () {
     const API = "/api";
+    const DELIVERY_FEE_USD = 3.00;
 
+    // utilities
     function toStaticUrl(url) {
         const placeholder = window.PLACEHOLDER_IMAGE || '/static/images/placeholder.jpg';
         if (!url) return placeholder;
         if (typeof url !== 'string') return placeholder;
         if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/')) return url;
         return `/static/${url}`;
+    }
+
+    function getCsrfToken() {
+        return document.querySelector('meta[name="csrf-token"]')?.content || '';
+    }
+
+    function getIdempotencyKey() {
+        try {
+            let key = sessionStorage.getItem('order_idempotency_key');
+            if (!key) {
+                if (typeof crypto !== 'undefined' && crypto.randomUUID) key = crypto.randomUUID();
+                else key = 'id-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
+                sessionStorage.setItem('order_idempotency_key', key);
+            }
+            return key;
+        } catch (e) {
+            // fallback
+            return 'id-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
+        }
     }
 
     // FX support
@@ -60,26 +80,25 @@
         const n = Number(value) || 0;
         if (currency === 'GBP') {
             try {
-                return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 0 }).format(n);
-            } catch (e) { return `£${Math.round(n)}`; }
+                return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 2 }).format(n);
+            } catch (e) { return `£${(Math.round(n * 100) / 100).toFixed(2)}`; }
         } else if (currency === 'USD') {
             const rate = fxRateGBPtoUSD || 1.25;
             const converted = n * rate;
             try {
-                return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(converted);
-            } catch (e) { return `$${Math.round(converted)}`; }
+                return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(converted);
+            } catch (e) { return `$${(Math.round(converted * 100) / 100).toFixed(2)}`; }
         }
         return String(n);
-    }
-
-    function formatPriceInteger(value) {
-        return formatCurrency(value, 'GBP');
     }
 
     function getCart() { return JSON.parse(localStorage.getItem('cart') || '[]'); }
     function saveCart(cart) { localStorage.setItem('cart', JSON.stringify(cart)); }
 
+    // discount & promos
     let checkoutDiscountPercent = 0;
+    let availablePromos = [];
+
     async function fetchDiscountPercent() {
         try {
             const r = await fetch(`${API}/settings/checkout_discount`);
@@ -108,7 +127,6 @@
         }
     }
 
-    let availablePromos = [];
     async function loadActivePromos() {
         const promoSelect = document.getElementById('promo_code_summary');
         try {
@@ -148,136 +166,206 @@
         }
     }
 
-    // Delivery options (fees in GBP). Provider logos use placeholder unless real assets provided.
-    const DELIVERY_OPTIONS = [
-        // note: relative paths (no leading slash) will be converted to /static/... by toStaticUrl()
-        { id: 'aramex_std', provider: 'Aramex', providerUrl: 'https://www.aramex.com', label: 'Standard (3-5 days)', fee: 3, logo: 'images/logos/aramex.png' },
-        { id: 'dhl_express', provider: 'DHL', providerUrl: 'https://www.dhl.com', label: 'Express (1-2 days)', fee: 7, logo: 'images/logos/dhl.png' },
-        { id: 'fetchr_priority', provider: 'Fetchr', providerUrl: 'https://www.fetchr.us', label: 'Priority (1 day)', fee: 10, logo: 'images/logos/fetchr.png' },
-        { id: 'emirates_economy', provider: 'Emirates Post', providerUrl: 'https://www.emiratespost.ae', label: 'Economy (5-7 days)', fee: 2, logo: 'images/logos/emirates.png' }
-    ];
-
-    // persist selected delivery in localStorage
-    const DELIVERY_STORAGE_KEY = 'selected_delivery_option';
-    let selectedDeliveryId = (localStorage.getItem(DELIVERY_STORAGE_KEY) || (DELIVERY_OPTIONS[0] && DELIVERY_OPTIONS[0].id));
-
-    function getSelectedDeliveryOption() {
-        let opt = DELIVERY_OPTIONS.find(o => o.id === selectedDeliveryId);
-        if (!opt) {
-            opt = DELIVERY_OPTIONS[0] || { id: '', fee: 0, provider: '', providerUrl: '', label: '' };
-            selectedDeliveryId = opt.id;
-        }
-        return opt;
+    // --- Country population helpers (supports page & modal selectors) ---
+    function escapeHtml(s) {
+        return String(s || '').replace(/[&<>"']/g, function (m) {
+            return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m];
+        });
     }
 
-    function setSelectedDeliveryId(id) {
-        selectedDeliveryId = id;
-        try { localStorage.setItem(DELIVERY_STORAGE_KEY, id); } catch (e) { /* ignore */ }
-        // update hidden fields in any context (checkout page + modal)
-        const hiddenMain = document.getElementById('selectedDeliveryId');
-        if (hiddenMain) hiddenMain.value = id;
-        const hiddenModal = document.getElementById('selectedDeliveryIdModal');
-        if (hiddenModal) hiddenModal.value = id;
+    async function loadCountryListIntoSelects() {
+        // supports both page and modal selectors
+        const selectorList = ['#countrySelect', '#modal_countrySelect'];
+        const selects = selectorList.flatMap(sel => Array.from(document.querySelectorAll(sel)));
+        if (!selects.length) return;
 
-        // toggle active classes across all rendered provider containers
-        document.querySelectorAll('.delivery-card').forEach(card => {
-            if (card.dataset && card.dataset.id === id) {
-                card.classList.add('active');
-                const radio = card.querySelector('input[type="radio"]');
-                if (radio) radio.checked = true;
+        let countries = [];
+
+        // try local file first (user provided countries.json expected at /static/data/countries.json)
+        try {
+            const resLocal = await fetch('/static/data/countries.json', { cache: 'no-cache' });
+            if (resLocal && resLocal.ok) {
+                const js = await resLocal.json();
+                if (Array.isArray(js) && js.length) {
+                    countries = js.map(c => ({ name: c.name || c.label || '', code: c.code || c.iso || '' }))
+                        .filter(c => c.name)
+                        .sort((a, b) => a.name.localeCompare(b.name));
+                }
+            }
+        } catch (e) {
+            console.warn('Local countries.json fetch failed', e);
+        }
+
+        // fallback to restcountries if local not available
+        if (!countries.length) {
+            try {
+                const res = await fetch('https://restcountries.com/v3.1/all');
+                if (res && res.ok) {
+                    const data = await res.json();
+                    countries = data.map(c => {
+                        const name = c && c.name && (c.name.common || c.name.official) ? (c.name.common || c.name.official) : '';
+                        return { name: name || '', code: c.cca2 || c.cca3 || '' };
+                    }).filter(c => c.name).sort((a, b) => a.name.localeCompare(b.name));
+                }
+            } catch (e) {
+                console.warn('restcountries fetch failed', e);
+            }
+        }
+
+        let optionsHtml = '<option value="">-- Select country --</option>';
+        if (countries.length) {
+            for (const c of countries) {
+                const label = escapeHtml(c.name);
+                optionsHtml += `<option value="${label}">${label}</option>`;
+            }
+        }
+        optionsHtml += '<option value="OTHER">Other (enter manually)</option>';
+
+        selects.forEach(s => {
+            const prev = s.value || '';
+            s.innerHTML = optionsHtml;
+            if (prev) {
+                try { s.value = prev; } catch (e) { /* ignore */ }
+            }
+            // set modal manual visibility if needed
+            if (s.id === 'modal_countrySelect') {
+                const manual = document.getElementById('modal_manualCountry');
+                if (manual) manual.style.display = (s.value === 'OTHER') ? 'block' : 'none';
             } else {
-                card.classList.remove('active');
-                const radio = card.querySelector('input[type="radio"]');
-                if (radio) radio.checked = false;
+                const manual = document.getElementById('manualCountry');
+                if (manual) manual.style.display = (s.value === 'OTHER') ? 'block' : 'none';
             }
         });
-
-        renderCartSummary(); // refresh totals everywhere
     }
 
-    // render into the provided container element; if none provided, default to '#deliveryProviders'
-    function renderDeliveryProviders(containerEl) {
-        const container = containerEl || document.getElementById('deliveryProviders');
-        if (!container) return;
-        const placeholder = window.PLACEHOLDER_IMAGE || '/static/images/placeholder.jpg';
-        container.innerHTML = '';
-        DELIVERY_OPTIONS.forEach(opt => {
-            const card = document.createElement('div');
-            card.className = 'delivery-card' + (opt.id === selectedDeliveryId ? ' active' : '');
-            card.setAttribute('role', 'listitem');
-            card.setAttribute('tabindex', '0');
-            card.dataset.id = opt.id;
-
-            const chooseWrap = document.createElement('div');
-            chooseWrap.className = 'choose';
-            const radio = document.createElement('input');
-            radio.type = 'radio';
-            radio.name = 'delivery_option_select';
-            radio.value = opt.id;
-            radio.checked = (opt.id === selectedDeliveryId);
-            radio.addEventListener('change', function (e) {
-                setSelectedDeliveryId(this.value);
-            });
-            chooseWrap.appendChild(radio);
-
-            const logoImg = document.createElement('img');
-            // Use toStaticUrl so relative paths like "images/logos/dhl.png" become "/static/images/logos/dhl.png"
-            // toStaticUrl will return the placeholder if opt.logo is falsy
-            logoImg.src = toStaticUrl(opt.logo);
-            logoImg.alt = opt.provider;
-
-            const providerName = document.createElement('div');
-            providerName.className = 'provider-name';
-            providerName.innerText = opt.provider;
-
-            const dlabel = document.createElement('div');
-            dlabel.className = 'delivery-label';
-            dlabel.innerText = opt.label;
-
-            const fee = document.createElement('div');
-            fee.className = 'fee';
-            fee.innerText = formatCurrency(opt.fee, 'GBP');
-
-            logoImg.addEventListener('click', (ev) => {
-                ev.stopPropagation();
-                window.open(opt.providerUrl, '_blank', 'noopener');
-            });
-            providerName.addEventListener('click', (ev) => {
-                ev.stopPropagation();
-                window.open(opt.providerUrl, '_blank', 'noopener');
-            });
-
-            card.addEventListener('click', function (ev) {
-                setSelectedDeliveryId(opt.id);
-            });
-
-            card.addEventListener('keydown', function (ev) {
-                if (ev.key === 'Enter' || ev.key === ' ') {
-                    ev.preventDefault();
-                    setSelectedDeliveryId(opt.id);
+    function wireCountrySelectToggle() {
+        document.addEventListener('change', function (ev) {
+            const t = ev.target;
+            if (!t) return;
+            if (t.id === 'countrySelect' || t.id === 'modal_countrySelect') {
+                if (t.id === 'modal_countrySelect') {
+                    const manual = document.getElementById('modal_manualCountry');
+                    if (!manual) return;
+                    manual.style.display = (t.value === 'OTHER') ? 'block' : 'none';
+                } else {
+                    const manual = document.getElementById('manualCountry');
+                    if (!manual) return;
+                    manual.style.display = (t.value === 'OTHER') ? 'block' : 'none';
                 }
-            });
-
-            card.appendChild(chooseWrap);
-            card.appendChild(logoImg);
-            card.appendChild(providerName);
-            card.appendChild(dlabel);
-            card.appendChild(fee);
-
-            // tag card with id so setSelectedDeliveryId toggles it later across contexts
-            card.dataset.id = opt.id;
-
-            container.appendChild(card);
-        });
-
-        // ensure hidden fields reflect selection
-        const hiddenMain = document.getElementById('selectedDeliveryId');
-        if (hiddenMain) hiddenMain.value = selectedDeliveryId || '';
-        const hiddenModal = document.getElementById('selectedDeliveryIdModal');
-        if (hiddenModal) hiddenModal.value = selectedDeliveryId || '';
+            }
+        }, { capture: true });
     }
 
-    // Helper: set button visual & accessibility state
+    function getSelectedCountry(root) {
+        // root may be modal root; support modal_* ids inside root
+        const ctx = root && root.querySelector ? root : document;
+        const modalSelect = ctx.querySelector('#modal_countrySelect');
+        const modalInput = ctx.querySelector('#modal_countryInput');
+        if (modalSelect) {
+            if (modalSelect.value && modalSelect.value !== 'OTHER') return modalSelect.value;
+            if (modalInput && modalInput.value) return modalInput.value.trim();
+        }
+        const pageSelect = ctx.querySelector('#countrySelect');
+        const pageInput = ctx.querySelector('#countryInput');
+        if (pageSelect) {
+            if (pageSelect.value && pageSelect.value !== 'OTHER') return pageSelect.value;
+            if (pageInput && pageInput.value) return pageInput.value.trim();
+        }
+        return '';
+    }
+
+    // --- Shipping autofill from stored payment details (sessionStorage) ---
+    function parseStoredPaymentCustomer() {
+        try {
+            const raw = sessionStorage.getItem('paypal_customer');
+            if (!raw) return null;
+            const obj = JSON.parse(raw);
+            if (!obj || typeof obj !== 'object') return null;
+            return obj;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function fillFormWithStoredPayment(root) {
+        const ctx = root && root.querySelector ? root : document;
+        const stored = parseStoredPaymentCustomer();
+        if (!stored) return false;
+        try {
+            // prefer modal fields inside provided root, fall back to page fields
+            const nameEl = ctx.querySelector('#modal_customer') || ctx.querySelector('#customer') || document.querySelector('#customer');
+            const emailEl = ctx.querySelector('#modal_email') || ctx.querySelector('#email') || document.querySelector('#email');
+            const phoneEl = ctx.querySelector('#modal_phone') || ctx.querySelector('#phone') || document.querySelector('#phone');
+            const addressEl = ctx.querySelector('#modal_address') || ctx.querySelector('#address') || document.querySelector('#address');
+
+            if (stored.name && nameEl) nameEl.value = stored.name;
+            if (stored.email && emailEl) emailEl.value = stored.email;
+            if (stored.phone && phoneEl) phoneEl.value = stored.phone;
+            if (stored.address && addressEl) addressEl.value = stored.address;
+
+            // country handling: prefer modal select/input
+            const mSelect = ctx.querySelector('#modal_countrySelect');
+            const mInput = ctx.querySelector('#modal_countryInput');
+            const pSelect = ctx.querySelector('#countrySelect');
+            const pInput = ctx.querySelector('#countryInput');
+
+            const countryVal = stored.country || '';
+            if (mSelect) {
+                const found = Array.from(mSelect.options).find(o => o.value.toLowerCase() === countryVal.toLowerCase());
+                if (found) {
+                    mSelect.value = found.value;
+                    const manual = document.getElementById('modal_manualCountry');
+                    if (manual) manual.style.display = 'none';
+                } else if (mInput) {
+                    mSelect.value = 'OTHER';
+                    mInput.value = countryVal;
+                    const manual = document.getElementById('modal_manualCountry');
+                    if (manual) manual.style.display = 'block';
+                }
+            } else if (pSelect) {
+                const found = Array.from(pSelect.options).find(o => o.value.toLowerCase() === countryVal.toLowerCase());
+                if (found) {
+                    pSelect.value = found.value;
+                    const manual = document.getElementById('manualCountry');
+                    if (manual) manual.style.display = 'none';
+                } else if (pInput) {
+                    pSelect.value = 'OTHER';
+                    pInput.value = countryVal;
+                    const manual = document.getElementById('manualCountry');
+                    if (manual) manual.style.display = 'block';
+                }
+            }
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function wireUsePaymentAddressToggle() {
+        document.addEventListener('change', function (ev) {
+            const t = ev.target;
+            if (!t) return;
+            if (t.id === 'usePaymentAddress') {
+                const formRoot = t.closest('form') || (document.getElementById('checkoutModalContent') || document);
+                if (t.checked) {
+                    const ok = fillFormWithStoredPayment(formRoot);
+                    if (!ok) {
+                        const hint = formRoot.querySelector('#orderMsg') || document.getElementById('orderMsg');
+                        if (hint) hint.innerHTML = '<div style="color:#c44;">No stored payment details found to auto-fill. Please enter address manually.</div>';
+                        setTimeout(() => { try { t.checked = false; } catch (e) { } }, 80);
+                    } else {
+                        const hint = formRoot.querySelector('#orderMsg') || document.getElementById('orderMsg');
+                        if (hint) hint.innerHTML = '<div style="color:#27ae60;">Shipping address filled from last payment details. Edit if necessary.</div>';
+                    }
+                } else {
+                    const hint = formRoot.querySelector('#orderMsg') || document.getElementById('orderMsg');
+                    if (hint) hint.innerHTML = '';
+                }
+            }
+        }, { capture: true });
+    }
+
+    // --- Button state helper ---
     function setButtonState(btn, enabled, reason) {
         if (!btn) return;
         btn.disabled = !enabled;
@@ -296,7 +384,6 @@
         }
     }
 
-    // Update button enabled/disabled and hint text based on payment selection + cart
     function updatePaymentButtonsStateCheckout() {
         const cart = getCart();
         const cartEmpty = !cart || !cart.length;
@@ -325,11 +412,57 @@
         }
     }
 
-    // renderCartSummary optionally scoped to a container (page or modal)
-    // if containerEl is inside the modal (checkout modal), a compact inline totals row is used
+    // Modify cart quantity helper (used by +/- buttons)
+    function modifyCartQty(productId, delta) {
+        try {
+            const cart = getCart() || [];
+            let changed = false;
+            for (let i = 0; i < cart.length; i++) {
+                const it = cart[i];
+                const id = it.id || it.product_id || String(it.id || '');
+                if (String(id) === String(productId)) {
+                    let qty = parseInt(it.quantity || it.qty || 1, 10) || 1;
+                    qty += delta;
+                    if (qty <= 0) {
+                        // remove item
+                        cart.splice(i, 1);
+                    } else {
+                        it.quantity = qty;
+                    }
+                    changed = true;
+                    break;
+                }
+            }
+            if (changed) {
+                saveCart(cart);
+                renderCartSummary();
+                updatePaymentButtonsStateCheckout();
+            }
+        } catch (e) {
+            console.warn('modifyCartQty error', e);
+        }
+    }
+
+    // delegate +/- clicks
+    document.addEventListener('click', function (ev) {
+        const plus = ev.target.closest && ev.target.closest('.qty-plus');
+        if (plus) {
+            const id = plus.getAttribute('data-id');
+            modifyCartQty(id, +1);
+            ev.preventDefault();
+            return;
+        }
+        const minus = ev.target.closest && ev.target.closest('.qty-minus');
+        if (minus) {
+            const id = minus.getAttribute('data-id');
+            modifyCartQty(id, -1);
+            ev.preventDefault();
+            return;
+        }
+    }, true);
+
+    // renderCartSummary (now includes qty +/- controls and delivery fee)
     function renderCartSummary(containerEl) {
-        // determine target container for list and totals
-        // prefer explicit containerEl, else choose best-known targets
         let container = containerEl;
         if (!container) {
             container = document.getElementById('cartSummarySection') || document.getElementById('cartSection') || document.getElementById('cartModal') || document.getElementById('cartSummarySection');
@@ -353,12 +486,19 @@
             const price = parseFloat(item.price || 0);
             const itemTotal = price * qty;
             subtotal += itemTotal;
+
+            const pid = (item.id || item.product_id || item.sku || item.code || '').toString();
+
+            // plus (green) and minus (red) buttons: inline styles to avoid needing extra CSS files
+            const minusBtn = `<button type="button" class="qty-minus" data-id="${escapeHtml(pid)}" aria-label="Decrease quantity" title="Decrease" style="background:#e74c3c;color:#fff;border:none;border-radius:6px;padding:4px 8px;cursor:pointer;font-weight:700;margin-right:6px;">−</button>`;
+            const plusBtn = `<button type="button" class="qty-plus" data-id="${escapeHtml(pid)}" aria-label="Increase quantity" title="Increase" style="background:#27ae60;color:#fff;border:none;border-radius:6px;padding:4px 8px;cursor:pointer;font-weight:700;margin-left:6px;">+</button>`;
+
             if (isModal) {
-                // compact item row for modal: icon + title x qty + small total
                 return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-                    <img src="${toStaticUrl(item.image || item.image_url || '')}" alt="${item.title || ''}" style="width:40px;height:40px;object-fit:contain;border-radius:6px;background:#fff;border:1px solid #eee;">
+                    <img src="${toStaticUrl(item.image || item.image_url || '')}" alt="${escapeHtml(item.title || item.name || '')}" style="width:40px;height:40px;object-fit:contain;border-radius:6px;background:#fff;border:1px solid #eee;">
                     <div style="flex:1;">
-                        <div style="font-weight:600;font-size:0.95em">${item.title || item.name || ''} <span class="small-muted" style="font-weight:400">x${qty}</span></div>
+                        <div style="font-weight:600;font-size:0.95em">${escapeHtml(item.title || item.name || '')} <span class="small-muted" style="font-weight:400">x${qty}</span></div>
+                        <div style="margin-top:6px;"><span>${minusBtn}<span style="font-weight:700;padding:0 6px;">${qty}</span>${plusBtn}</span></div>
                     </div>
                     <div style="font-weight:700;text-align:right;">${formatCurrency(itemTotal, 'GBP')}</div>
                 </div>`;
@@ -366,20 +506,21 @@
                 return `<tr>
                     <td style="padding:8px 6px;">
                         <div style="display:flex;gap:8px;align-items:center;">
-                            <img src="${toStaticUrl(item.image || item.image_url || '')}" alt="${item.title || ''}" style="width:56px;height:56px;object-fit:contain;border-radius:6px;background:#fff;border:1px solid #eee;">
+                            <img src="${toStaticUrl(item.image || item.image_url || '')}" alt="${escapeHtml(item.title || item.name || '')}" style="width:56px;height:56px;object-fit:contain;border-radius:6px;background:#fff;border:1px solid #eee;">
                             <div>
-                                <div style="font-weight:600">${item.title || item.name || ''}</div>
-                                <div class="small-muted" style="font-size:13px">${item.brand || ''}</div>
+                                <div style="font-weight:600">${escapeHtml(item.title || item.name || '')}</div>
+                                <div class="small-muted" style="font-size:13px">${escapeHtml(item.brand || '')}</div>
+                                <div style="margin-top:6px;">${minusBtn}<span style="font-weight:700;padding:0 6px;">${qty}</span>${plusBtn}</div>
                             </div>
                         </div>
                     </td>
                     <td style="text-align:center;">${qty}</td>
-                    <td style="text-align:right;">${formatCurrency(itemTotal, 'GBP')} <div class="small-muted" style="display:inline-block;margin-left:8px;">≈ ${formatCurrency(itemTotal, 'USD')}</div></td>
+                    <td style="text-align:right;">${formatCurrency(itemTotal, 'GBP')} <div class="small-muted" style="display:inline-block;margin-left:8px;">(${formatCurrency(itemTotal, 'USD')})</div></td>
                 </tr>`;
             }
         }).join('');
 
-        // compute discounts and delivery
+        // compute discounts
         const promoSelect = document.getElementById('promo_code_summary');
         let promoPercent = 0;
         if (promoSelect) {
@@ -395,9 +536,11 @@
         const discountAmount = subtotal * (combinedPercent / 100);
         const discountedTotal = subtotal - discountAmount;
 
-        const deliveryOption = getSelectedDeliveryOption();
-        const deliveryFee = Number(deliveryOption.fee || 0);
-        const finalTotal = discountedTotal + deliveryFee;
+        // delivery fee: defined as USD (DELIVERY_FEE_USD); compute GBP equivalent (primary display)
+        const rate = fxRateGBPtoUSD || 1.25;
+        const deliveryFeeGBP = parseFloat((DELIVERY_FEE_USD / rate).toFixed(2));
+        const deliveryFee = deliveryFeeGBP; // in GBP for totals
+        const finalTotal = parseFloat((discountedTotal + deliveryFee).toFixed(2));
 
         // Render differently for modal vs page
         if (isModal) {
@@ -410,7 +553,7 @@
                     <div class="totals-item"><div class="small-muted">Subtotal</div><div style="font-weight:700;">${formatCurrency(subtotal, 'GBP')}<span class="small-muted" style="display:block;font-weight:400">(${formatCurrency(subtotal, 'USD')})</span></div></div>
                     ${globalPercent > 0 ? `<div class="totals-item"><div class="small-muted">Auto Discount (${globalPercent}%)</div><div style="font-weight:700;color:#b8860b;">-${formatCurrency(subtotal * (globalPercent / 100), 'GBP')}</div></div>` : ''}
                     ${promoPercent > 0 ? `<div class="totals-item"><div class="small-muted">Promo (${promoPercent}%)</div><div style="font-weight:700;color:#b8860b;">-${formatCurrency(subtotal * (promoPercent / 100), 'GBP')}</div></div>` : ''}
-                    <div class="totals-item"><div class="small-muted">Delivery (${deliveryOption.provider})</div><div style="font-weight:700;color:#27ae60;">${formatCurrency(deliveryFee, 'GBP')}</div></div>
+                    <div class="totals-item"><div class="small-muted">Delivery</div><div style="font-weight:700;color:#27ae60;">${formatCurrency(deliveryFee, 'GBP')} <span class="small-muted" style="display:block;font-weight:400">(${formatCurrency(deliveryFee, 'USD')})</span></div></div>
                     <div class="totals-item total" style="margin-left:8px;border-left:1px solid #eee;padding-left:8px;"><div class="small-muted">Total</div><div style="font-weight:900;color:#27ae60;">${formatCurrency(finalTotal, 'GBP')} <span class="small-muted" style="display:block;font-weight:400">(${formatCurrency(finalTotal, 'USD')})</span></div></div>
                 </div>
             `;
@@ -425,7 +568,7 @@
                     <tr class="total-row"><td></td><td style="font-weight:700;">Subtotal</td><td style="text-align:right;font-weight:700;">${formatCurrency(subtotal, 'GBP')} (${formatCurrency(subtotal, 'USD')})</td></tr>
                     ${globalPercent > 0 ? `<tr class="total-row"><td></td><td style="font-weight:700;color:#b8860b;">Auto Discount (${globalPercent}%)</td><td style="text-align:right;color:#b8860b;">-${formatCurrency(subtotal * (globalPercent / 100), 'GBP')} (${formatCurrency(subtotal * (globalPercent / 100), 'USD')})</td></tr>` : ''}
                     ${promoPercent > 0 ? `<tr class="total-row"><td></td><td style="font-weight:700;color:#b8860b;">Promo (${promoPercent}%)</td><td style="text-align:right;color:#b8860b;">-${formatCurrency(subtotal * (promoPercent / 100), 'GBP')} (${formatCurrency(subtotal * (promoPercent / 100), 'USD')})</td></tr>` : ''}
-                    <tr class="total-row"><td></td><td style="font-weight:700;">Delivery Fee <span class="small-muted" style="font-weight:400;">(${deliveryOption.provider})</span></td><td style="text-align:right;color:#27ae60;font-weight:700;">${formatCurrency(deliveryFee, 'GBP')} (${formatCurrency(deliveryFee, 'USD')})</td></tr>
+                    <tr class="total-row"><td></td><td style="font-weight:700;">Delivery Fee</td><td style="text-align:right;color:#27ae60;font-weight:700;">${formatCurrency(deliveryFee, 'GBP')} (${formatCurrency(deliveryFee, 'USD')})</td></tr>
                     <tr class="total-row"><td></td><td style="font-weight:700;">Total (after discount + delivery)</td><td style="text-align:right;color:#27ae60;font-weight:700;">${formatCurrency(finalTotal, 'GBP')} (${formatCurrency(finalTotal, 'USD')})</td></tr>
                 </tfoot>
             </table>`;
@@ -435,232 +578,20 @@
         updatePaymentButtonsStateCheckout();
     }
 
-    // COUNTRY / CITY logic (page-global handlers remain). We also provide modal-scoped handlers below.
-
-    const COUNTRIES_CITY_MAP = {
-        "Bahrain": ["Manama", "Muharraq", "Riffa", "Hamad Town", "Isa Town"],
-        "Egypt": ["Cairo", "Alexandria", "Giza", "Mansoura", "Suez"],
-        "Kuwait": ["Kuwait City", "Hawalli", "Al Ahmadi", "Jahra", "Farwaniya"],
-        "Qatar": ["Doha", "Al Rayyan", "Al Wakrah", "Al Khor", "Umm Salal"],
-        "Saudi Arabia": ["Riyadh", "Jeddah", "Mecca", "Medina", "Dammam"],
-        "UAE": ["Dubai", "Abu Dhabi", "Sharjah", "Ajman", "Ras Al Khaimah"]
-    };
-
-    function showManualCountryCity(show, hideCountryInput = false) {
-        const manual = document.getElementById('manualCountryCity');
-        const cityContainer = document.getElementById('citySelectContainer');
-        const citySelect = document.getElementById('citySelect');
-        const countryInput = document.getElementById('countryInput');
-        if (show) {
-            if (manual) manual.style.display = 'block';
-            if (countryInput) countryInput.style.display = hideCountryInput ? 'none' : 'block';
-            if (cityContainer) { cityContainer.style.display = 'none'; cityContainer.setAttribute('aria-hidden', 'true'); }
-            if (citySelect) citySelect.innerHTML = '<option value="">-- Select city --</option>';
-        } else {
-            if (manual) manual.style.display = 'none';
-            if (countryInput) countryInput.style.display = 'block';
-        }
-    }
-
-    function showCitySelectWith(list) {
-        const cityContainer = document.getElementById('citySelectContainer');
-        const citySelect = document.getElementById('citySelect');
-        if (!cityContainer || !citySelect) return;
-        let html = '<option value="">-- Select city --</option>';
-        list.forEach(c => { html += `<option value="${c}">${c}</option>`; });
-        html += '<option value="OTHER_CITY">Other (enter manually)</option>';
-        citySelect.innerHTML = html;
-        cityContainer.style.display = 'block';
-        cityContainer.setAttribute('aria-hidden', 'false');
-        // hide manual inputs when we show select
-        const manual = document.getElementById('manualCountryCity');
-        if (manual) manual.style.display = 'none';
-    }
-
-    function handleCountryChange() {
-        const countrySelect = document.getElementById('countrySelect');
-        if (!countrySelect) return;
-        const val = countrySelect.value || '';
-        const countryInput = document.getElementById('countryInput');
-        const cityInput = document.getElementById('cityInput');
-        const citySelect = document.getElementById('citySelect');
-
-        if (!val || val === 'OTHER') {
-            // show manual inputs for both country and city
-            showManualCountryCity(true, false);
-            if (countryInput) countryInput.value = '';
-            if (cityInput) cityInput.value = '';
-            return;
-        }
-
-        // a listed country was chosen (not OTHER)
-        if (countryInput) countryInput.value = ''; // clear manual country
-
-        // If we have pre-defined cities for this country, show select
-        if (COUNTRIES_CITY_MAP.hasOwnProperty(val)) {
-            showCitySelectWith(COUNTRIES_CITY_MAP[val]);
-            return;
-        }
-
-        // listed country but no cities in map -> show manual city input only and hide manual country input
-        showManualCountryCity(true, true);
-    }
-
-    function handleCitySelectChange() {
-        const citySelect = document.getElementById('citySelect');
-        const manual = document.getElementById('manualCountryCity');
-        if (!citySelect || !manual) return;
-        if (citySelect.value === 'OTHER_CITY') {
-            // show manual city input
-            manual.style.display = 'block';
-            // because we still know country from select, hide country manual input
-            const countryInput = document.getElementById('countryInput');
-            if (countryInput) countryInput.style.display = 'none';
-        } else {
-            // hide manual city input unless country is blank or OTHER
-            const countrySelect = document.getElementById('countrySelect');
-            if (countrySelect && countrySelect.value && countrySelect.value !== 'OTHER') {
-                manual.style.display = 'none';
-            }
-        }
-    }
-
-    // Scoped country/city handlers for modal (operate only within provided root)
-    function showManualCountryCityScoped(root, show, hideCountryInput = false) {
-        const manual = root.querySelector('#manualCountryCity');
-        const cityContainer = root.querySelector('#citySelectContainer');
-        const citySelect = root.querySelector('#citySelect');
-        const countryInput = root.querySelector('#countryInput');
-        if (show) {
-            if (manual) manual.style.display = 'block';
-            if (countryInput) countryInput.style.display = hideCountryInput ? 'none' : 'block';
-            if (cityContainer) { cityContainer.style.display = 'none'; cityContainer.setAttribute('aria-hidden', 'true'); }
-            if (citySelect) citySelect.innerHTML = '<option value="">-- Select city --</option>';
-        } else {
-            if (manual) manual.style.display = 'none';
-            if (countryInput) countryInput.style.display = 'block';
-        }
-    }
-
-    function showCitySelectWithScoped(root, list) {
-        const cityContainer = root.querySelector('#citySelectContainer');
-        const citySelect = root.querySelector('#citySelect');
-        if (!cityContainer || !citySelect) return;
-        let html = '<option value="">-- Select city --</option>';
-        list.forEach(c => { html += `<option value="${c}">${c}</option>`; });
-        html += '<option value="OTHER_CITY">Other (enter manually)</option>';
-        citySelect.innerHTML = html;
-        cityContainer.style.display = 'block';
-        cityContainer.setAttribute('aria-hidden', 'false');
-        const manual = root.querySelector('#manualCountryCity');
-        if (manual) manual.style.display = 'none';
-    }
-
-    function handleCountryChangeScoped(root) {
-        const countrySelect = root.querySelector('#countrySelect');
-        if (!countrySelect) return;
-        const val = countrySelect.value || '';
-        const countryInput = root.querySelector('#countryInput');
-        const cityInput = root.querySelector('#cityInput');
-        const citySelect = root.querySelector('#citySelect');
-
-        if (!val || val === 'OTHER') {
-            showManualCountryCityScoped(root, true, false);
-            if (countryInput) countryInput.value = '';
-            if (cityInput) cityInput.value = '';
-            return;
-        }
-
-        if (countryInput) countryInput.value = '';
-
-        if (COUNTRIES_CITY_MAP.hasOwnProperty(val)) {
-            showCitySelectWithScoped(root, COUNTRIES_CITY_MAP[val]);
-            return;
-        }
-
-        showManualCountryCityScoped(root, true, true);
-    }
-
-    function handleCitySelectChangeScoped(root) {
-        const citySelect = root.querySelector('#citySelect');
-        const manual = root.querySelector('#manualCountryCity');
-        if (!citySelect || !manual) return;
-        if (citySelect.value === 'OTHER_CITY') {
-            manual.style.display = 'block';
-            const countryInput = root.querySelector('#countryInput');
-            if (countryInput) countryInput.style.display = 'none';
-        } else {
-            const countrySelect = root.querySelector('#countrySelect');
-            if (countrySelect && countrySelect.value && countrySelect.value !== 'OTHER') {
-                manual.style.display = 'none';
-            }
-        }
-    }
-
-    function getSelectedCountryAndCity() {
-        const countrySelect = document.getElementById('countrySelect');
-        const countryInput = document.getElementById('countryInput');
-        const citySelect = document.getElementById('citySelect');
-        const cityInput = document.getElementById('cityInput');
-
-        let country = '';
-        let city = '';
-
-        if (countrySelect && countrySelect.value && countrySelect.value !== 'OTHER') {
-            country = countrySelect.value;
-        } else if (countryInput && countryInput.value) {
-            country = countryInput.value.trim();
-        }
-
-        const cityContainer = document.getElementById('citySelectContainer');
-        if (cityContainer && cityContainer.style.display !== 'none' && citySelect && citySelect.value && citySelect.value !== 'OTHER_CITY') {
-            city = citySelect.value;
-        } else if (cityInput && cityInput.value) {
-            city = cityInput.value.trim();
-        }
-
-        return { country, city };
-    }
-
-    // getSelectedCountryAndCityScoped for modal root (if present)
-    function getSelectedCountryAndCityScoped(root) {
-        const countrySelect = root.querySelector('#countrySelect');
-        const countryInput = root.querySelector('#countryInput');
-        const citySelect = root.querySelector('#citySelect');
-        const cityInput = root.querySelector('#cityInput');
-
-        let country = '';
-        let city = '';
-
-        if (countrySelect && countrySelect.value && countrySelect.value !== 'OTHER') {
-            country = countrySelect.value;
-        } else if (countryInput && countryInput.value) {
-            country = countryInput.value.trim();
-        }
-
-        const cityContainer = root.querySelector('#citySelectContainer');
-        if (cityContainer && cityContainer.style.display !== 'none' && citySelect && citySelect.value && citySelect.value !== 'OTHER_CITY') {
-            city = citySelect.value;
-        } else if (cityInput && cityInput.value) {
-            city = cityInput.value.trim();
-        }
-
-        return { country, city };
-    }
-
-    async function submitOrders(customer, email, phone, address, payment_method, promo_code, date, rootForCountryCity) {
+    // submitOrders uses CSRF & idempotency headers, and supports modal-scoped country selection
+    async function submitOrders(customer, email, phone, address, payment_method, promo_code, date, rootForCountry) {
         const cart = getCart();
         if (!cart || !cart.length) return { success: false, message: 'Cart empty' };
 
-        // prefer scoped country/city if root provided (modal)
-        let countryCity = { country: '', city: '' };
-        if (rootForCountryCity && rootForCountryCity.querySelector) {
-            countryCity = getSelectedCountryAndCityScoped(rootForCountryCity);
+        let country = '';
+        if (rootForCountry && rootForCountry.querySelector) {
+            country = getSelectedCountry(rootForCountry);
         } else {
-            countryCity = getSelectedCountryAndCity();
+            country = getSelectedCountry();
         }
 
-        const deliveryOption = getSelectedDeliveryOption();
+        const csrf = getCsrfToken();
+        const idemp = getIdempotencyKey();
 
         const results = [];
         for (const item of cart) {
@@ -669,8 +600,7 @@
                 customer_email: email,
                 customer_phone: phone,
                 customer_address: address,
-                customer_country: countryCity.country || '',
-                customer_city: countryCity.city || '',
+                customer_country: country || '',
                 product_id: item.id || item.product_id || '',
                 product_title: item.title || item.name || '',
                 quantity: item.quantity || item.qty || 1,
@@ -680,17 +610,14 @@
             };
             if (promo_code) payload.promo_code = promo_code;
 
-            // include delivery info in payload
-            if (deliveryOption && deliveryOption.id) {
-                payload.delivery_option_id = deliveryOption.id;
-                payload.delivery_provider = deliveryOption.provider;
-                payload.delivery_fee = Number(deliveryOption.fee || 0);
-            }
-
             try {
                 const res = await fetch(`${API}/orders`, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRF-Token": csrf,
+                        "X-Idempotency-Key": idemp
+                    },
                     body: JSON.stringify(payload)
                 });
                 if (!res.ok) {
@@ -708,11 +635,12 @@
 
     async function logOrderAttemptsForCart(status = 'CheckedOut') {
         const cart = getCart() || [];
+        const csrf = getCsrfToken();
         for (const item of cart) {
             try {
                 await fetch(`${API}/order-attempts`, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf },
                     body: JSON.stringify({
                         email: "",
                         product: item.title || item.name || "",
@@ -726,57 +654,31 @@
         }
     }
 
-    // Initialize delivery providers + country/city wiring inside the checkout modal (if present).
-    // Accepts either the modal root element or uses document to find known modal areas.
+    // Initialize modal-specific wiring
     function initCheckoutModal() {
         try {
             const modalRoot = document.getElementById('checkoutModalContent');
             if (!modalRoot) return;
 
-            // Render providers into the modal container if present
-            const modalProviders = modalRoot.querySelector('#deliveryProvidersModal');
-            if (modalProviders) renderDeliveryProviders(modalProviders);
-
-            // Wire modal-specific country/city selectors if present (scoped)
-            const modalCountry = modalRoot.querySelector('#countrySelect');
-            const modalCity = modalRoot.querySelector('#citySelect');
-            const modalManual = modalRoot.querySelector('#manualCountryCity');
-
+            // set manual country visibility for modal
+            const modalCountry = modalRoot.querySelector('#modal_countrySelect');
             if (modalCountry) {
-                // remove previous listener safely (if any) then add scoped listener
-                modalCountry.removeEventListener('change', modalCountry.__scopedChangeHandler);
-                modalCountry.__scopedChangeHandler = function () { handleCountryChangeScoped(modalRoot); };
-                modalCountry.addEventListener('change', modalCountry.__scopedChangeHandler);
-            }
-            if (modalCity) {
-                modalCity.removeEventListener('change', modalCity.__scopedChangeHandler);
-                modalCity.__scopedChangeHandler = function () { handleCitySelectChangeScoped(modalRoot); };
-                modalCity.addEventListener('change', modalCity.__scopedChangeHandler);
+                const manual = modalRoot.querySelector('#modal_manualCountry') || document.getElementById('modal_manualCountry');
+                if (manual) manual.style.display = (modalCountry.value === 'OTHER') ? 'block' : 'none';
             }
 
-            // set initial visibility/state according to current values
-            if (modalCountry) handleCountryChangeScoped(modalRoot);
-            if (modalCity) handleCitySelectChangeScoped(modalRoot);
-
-            // ensure promo hidden field exists in modal, and selectedDeliveryIdModal is set
-            const hiddenModal = modalRoot.querySelector('#selectedDeliveryIdModal');
-            if (hiddenModal) hiddenModal.value = selectedDeliveryId || '';
-
-            // update cart summary in modal (renderCartSummary with modal cartSection)
+            // render cart in modal
             const cartSection = modalRoot.querySelector('#cartSection');
             if (cartSection) renderCartSummary(cartSection);
             else {
-                // fallback: there may be an element with id cartSection at document level used by modal
                 const fallback = document.getElementById('cartSection');
                 if (fallback) renderCartSummary(fallback);
             }
         } catch (e) {
-            // don't let modal init errors break other scripts
             console.warn('initCheckoutModal error', e);
         }
     }
 
-    // Observe for modal insertion (handles dynamic modal markup insertion)
     function observeModalInsertion() {
         try {
             const body = document.body;
@@ -786,11 +688,9 @@
                     if (m.addedNodes && m.addedNodes.length) {
                         for (const node of m.addedNodes) {
                             if (node && node.querySelector && node.querySelector('#checkoutModalContent')) {
-                                // small timeout to allow other handlers to complete
                                 setTimeout(initCheckoutModal, 80);
                                 return;
                             }
-                            // If the checkout modal root itself was added:
                             if (node && node.id === 'checkoutModalContent') {
                                 setTimeout(initCheckoutModal, 80);
                                 return;
@@ -805,40 +705,24 @@
         }
     }
 
+    // DOMContentLoaded init
     document.addEventListener('DOMContentLoaded', async function () {
-        // Ensure discount + promos + FX loaded before first render so totals reflect them
+        await fetchFX();
         await fetchDiscountPercent();
         await loadActivePromos();
-        await fetchFX();
 
-        // Render providers on the checkout page and attempt to render into modal if already present
-        renderDeliveryProviders(document.getElementById('deliveryProviders'));
-        renderDeliveryProviders(document.getElementById('deliveryProvidersModal'));
+        // Countries (page + modal)
+        try { await loadCountryListIntoSelects(); } catch (e) { /* ignore */ }
+        wireCountrySelectToggle();
+        wireUsePaymentAddressToggle();
 
         renderCartSummary();
         updatePaymentButtonsStateCheckout();
 
-        // Wire page-global country/city event listeners (checkout page fields)
-        const countrySelect = document.getElementById('countrySelect');
-        const citySelect = document.getElementById('citySelect');
-        if (countrySelect) {
-            countrySelect.removeEventListener('change', handleCountryChange);
-            countrySelect.addEventListener('change', handleCountryChange);
-            // ensure initial state for page
-            handleCountryChange();
-        }
-        if (citySelect) {
-            citySelect.removeEventListener('change', handleCitySelectChange);
-            citySelect.addEventListener('change', handleCitySelectChange);
-        }
-
-        // attempt to initialize modal if already present
         initCheckoutModal();
-
-        // Observe modal insertion so dynamic modal markup is initialized
         observeModalInsertion();
 
-        // Also watch for changes to checkoutModalBg visibility attributes (aria-hidden/style)
+        // watch for modal visibility changes
         const checkoutBg = document.getElementById('checkoutModalBg');
         if (checkoutBg) {
             try {
@@ -848,7 +732,6 @@
                             const hidden = checkoutBg.getAttribute('aria-hidden');
                             const isVisible = (hidden === 'false') || (checkoutBg.style && checkoutBg.style.display && checkoutBg.style.display !== 'none');
                             if (isVisible) {
-                                // modal shown
                                 setTimeout(initCheckoutModal, 80);
                             }
                         }
@@ -860,17 +743,15 @@
             }
         }
 
-        // Fallback: many product "Buy Now" buttons open modal via clicks — add delegated listener so we initialize modal when user clicks such buttons.
+        // delegate to init modal when buy buttons open it
         document.addEventListener('click', function (ev) {
-            // common selectors used by the app might include data attributes or classes like 'buy-now', 'open-checkout-modal'
-            const trigger = ev.target.closest('[data-open-checkout], .buy-now, .open-checkout-modal, [data-action="open-checkout"], .product-buy-now');
+            const trigger = ev.target.closest && ev.target.closest('[data-open-checkout], .buy-now, .open-checkout-modal, [data-action="open-checkout"], .product-buy-now');
             if (trigger) {
-                // small timeout to allow other modal-opening handlers to run and insert modal DOM
                 setTimeout(initCheckoutModal, 120);
             }
         });
 
-        // Ensure PayPal buttons render if available
+        // PayPal buttons rendering for page & modal
         try {
             if (window.paypal && document.querySelector('#paypal-button-container')) {
                 const container = document.querySelector('#paypal-button-container');
@@ -878,36 +759,38 @@
                     renderPayPalButtons('#paypal-button-container', { currency: 'USD', successUrl: '/' });
                 }
             }
+            if (window.paypal && document.querySelector('#modal_paypal_button_container')) {
+                const container = document.querySelector('#modal_paypal_button_container');
+                if (!container.innerHTML.trim() && typeof renderPayPalButtons === 'function') {
+                    renderPayPalButtons('#modal_paypal_button_container', { currency: 'USD', successUrl: '/' });
+                }
+            }
         } catch (err) {
             console.warn('PayPal render failed on init', err);
         }
 
-        // Wire up form events (works both for page and modal since IDs are reused)
+        // Form wiring (handles page + modal since we use root scoping)
         const orderForm = document.getElementById('orderForm');
         if (orderForm) {
             orderForm.addEventListener('submit', async function (e) {
                 e.preventDefault();
 
-                // if the order form is inside the modal we might want to prefer modal-scoped country/city
+                // find which form context (modal or page)
                 const formRoot = orderForm.closest('#checkoutModalContent') || document;
 
-                const customer = formRoot.querySelector('#customer')?.value || document.getElementById('customer')?.value || '';
-                const email = formRoot.querySelector('#email')?.value || document.getElementById('email')?.value || '';
-                const phone = formRoot.querySelector('#phone')?.value || document.getElementById('phone')?.value || '';
-                const address = formRoot.querySelector('#address')?.value || document.getElementById('address')?.value || '';
+                // prefer modal_* fields inside modal context
+                const customer = (formRoot.querySelector('#modal_customer')?.value || formRoot.querySelector('#customer')?.value || document.getElementById('customer')?.value || '');
+                const email = (formRoot.querySelector('#modal_email')?.value || formRoot.querySelector('#email')?.value || document.getElementById('email')?.value || '');
+                const phone = (formRoot.querySelector('#modal_phone')?.value || formRoot.querySelector('#phone')?.value || document.getElementById('phone')?.value || '');
+                const address = (formRoot.querySelector('#modal_address')?.value || formRoot.querySelector('#address')?.value || document.getElementById('address')?.value || '');
                 const payment_method = formRoot.querySelector('#paymentSelect')?.value || document.getElementById('paymentSelect')?.value || 'Cash on Delivery';
                 const promo_code = document.getElementById('promo_code_summary')?.value || document.getElementById('promo_code_hidden')?.value || null;
                 const dateVal = formRoot.querySelector('#date')?.value || document.getElementById('date')?.value || new Date().toISOString().slice(0, 19).replace('T', ' ');
 
-                // Basic validation: require country (either selected or manual)
-                let countryCity = { country: '', city: '' };
-                if (formRoot !== document) {
-                    countryCity = getSelectedCountryAndCityScoped(formRoot);
-                } else {
-                    countryCity = getSelectedCountryAndCity();
-                }
+                // Basic validation: require country
+                let country = getSelectedCountry(formRoot !== document ? formRoot : null);
                 const orderMsg = formRoot.querySelector('#orderMsg') || document.getElementById('orderMsg');
-                if (!countryCity.country) {
+                if (!country) {
                     if (orderMsg) orderMsg.innerHTML = '<div style="color:#c44;">Please provide a country for shipping (select or enter manually).</div>';
                     return;
                 }
@@ -942,16 +825,15 @@
             });
         }
 
-        // Buy Now / card flow
+        // Buy Now / card flow wiring
         const buyNowBtn = document.getElementById('buyNowBtn');
         if (buyNowBtn) {
             buyNowBtn.addEventListener('click', async function () {
-                // gather same data and store for PayPal return flow
                 const formRoot = buyNowBtn.closest('#checkoutModalContent') || document;
-                const customer = formRoot.querySelector('#customer')?.value || document.getElementById('customer')?.value || '';
-                const email = formRoot.querySelector('#email')?.value || document.getElementById('email')?.value || '';
-                const phone = formRoot.querySelector('#phone')?.value || document.getElementById('phone')?.value || '';
-                const address = formRoot.querySelector('#address')?.value || document.getElementById('address')?.value || '';
+                const customer = formRoot.querySelector('#modal_customer')?.value || formRoot.querySelector('#customer')?.value || document.getElementById('customer')?.value || '';
+                const email = formRoot.querySelector('#modal_email')?.value || formRoot.querySelector('#email')?.value || document.getElementById('email')?.value || '';
+                const phone = formRoot.querySelector('#modal_phone')?.value || formRoot.querySelector('#phone')?.value || document.getElementById('phone')?.value || '';
+                const address = formRoot.querySelector('#modal_address')?.value || formRoot.querySelector('#address')?.value || document.getElementById('address')?.value || '';
                 const promo_code = document.getElementById('promo_code_summary')?.value || document.getElementById('promo_code_hidden')?.value || null;
                 const dateVal = formRoot.querySelector('#date')?.value || document.getElementById('date')?.value || new Date().toISOString().slice(0, 19).replace('T', ' ');
 
@@ -962,13 +844,13 @@
 
                 await logOrderAttemptsForCart('CheckedOut');
 
-                // prefer scoped country/city if modal exists
+                // prefer modal-scoped country
                 const modalRoot = document.getElementById('checkoutModalContent');
-                let countryCity = { country: '', city: '' };
-                if (modalRoot) countryCity = getSelectedCountryAndCityScoped(modalRoot);
-                else countryCity = getSelectedCountryAndCity();
-                const customerObj = { name: customer, email: email, phone: phone, address: address, country: countryCity.country, city: countryCity.city };
-                try { localStorage.setItem('paypal_customer', JSON.stringify(customerObj)); } catch (e) { /* ignore */ }
+                let country = '';
+                if (modalRoot) country = getSelectedCountry(modalRoot);
+                else country = getSelectedCountry();
+                const customerObj = { name: customer, email: email, phone: phone, address: address, country: country };
+                try { sessionStorage.setItem('paypal_customer', JSON.stringify(customerObj)); } catch (e) { /* ignore */ }
 
                 const cartItems = getCart() || [];
                 const itemsForServer = cartItems.map(i => ({
@@ -978,7 +860,7 @@
                     quantity: parseInt(i.quantity || i.qty || 1, 10),
                     currency: 'USD'
                 }));
-                try { localStorage.setItem('paypal_items', JSON.stringify(itemsForServer)); } catch (e) { /* ignore */ }
+                try { sessionStorage.setItem('paypal_items', JSON.stringify(itemsForServer)); } catch (e) { /* ignore */ }
 
                 if (typeof window.initiateCardCheckout === 'function') {
                     try {
@@ -989,9 +871,9 @@
                         if (detail.toLowerCase().includes('401') || detail.toLowerCase().includes('unauthorized')) {
                             if (orderMsg) orderMsg.innerHTML = `<div style="color:#e74c3c;font-weight:700;">Payment provider credentials appear missing or invalid on the server.</div>
                             <div style="color:#666;margin-top:8px;">Please ensure PAYPAL_CLIENT_ID and PAYPAL_SECRET are set as environment variables on the server (use sandbox values for development), and restart the application.</div>
-                            <div style="color:#666;margin-top:8px;font-size:0.9em;">Server error details: ${detail}</div>`;
+                            <div style="color:#666;margin-top:8px;font-size:0.9em;">Server error details: ${escapeHtml(detail)}</div>`;
                         } else {
-                            if (orderMsg) orderMsg.innerHTML = `<div style="color:#e74c3c;font-weight:700;">Failed to start card (PayPal) checkout.</div><div style="color:#666;margin-top:8px;font-size:0.9em;">${detail}</div>`;
+                            if (orderMsg) orderMsg.innerHTML = `<div style="color:#e74c3c;font-weight:700;">Failed to start card (PayPal) checkout.</div><div style="color:#666;margin-top:8px;font-size:0.9em;">${escapeHtml(detail)}</div>`;
                         }
                         setButtonState(document.getElementById('checkoutBtn'), true);
                         setButtonState(document.getElementById('buyNowBtn'), true);
@@ -1004,11 +886,11 @@
             });
         }
 
-        // sync on select change for payment
+        // payment select change binding
         const paymentSelect = document.getElementById('paymentSelect');
         if (paymentSelect) paymentSelect.addEventListener('change', updatePaymentButtonsStateCheckout);
 
-        // Periodic refresh (discounts, FX, promos)
+        // periodic refresh
         setInterval(async () => {
             const prev = checkoutDiscountPercent;
             await fetchDiscountPercent();
@@ -1019,17 +901,15 @@
         }, 30000);
     });
 
-    // expose some utilities for debugging in console (optional)
+    // expose utilities
     window.__checkout = {
         renderCartSummary,
         fetchDiscountPercent,
         loadActivePromos,
         fetchFX,
         getCart,
-        getSelectedCountryAndCity,
-        COUNTRIES_CITY_MAP,
-        DELIVERY_OPTIONS,
-        getSelectedDeliveryOption,
+        getSelectedCountry,
+        fillFormWithStoredPayment,
         initCheckoutModal
     };
 
